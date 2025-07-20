@@ -1,0 +1,38 @@
+server {
+    listen 80;
+    server_name {{ public_domain }};
+
+    # Set maximum allowed size of the client request body.
+    # Essential for POST requests, especially during setup or file uploads.
+    client_max_body_size 50M; # Increased from default to handle potential larger payloads
+
+    location / {
+        proxy_pass http://127.0.0.1:{{ wikijs_port }};
+        
+        # Standard proxy headers
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme; # Tells Wiki.js original protocol (https from CloudFront)
+        proxy_set_header X-Forwarded-Ssl on; # NEW: Explicitly tells Wiki.js that SSL was used at the proxy (CloudFront)
+        proxy_set_header X-Forwarded-Host $host;
+
+        # Headers for WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Disable buffering for real-time applications like WebSockets
+        proxy_buffering off;
+
+        # Increase timeout for long-running requests (e.g., large file uploads, complex API calls)
+        proxy_read_timeout 900s; # Adjust as needed
+
+        # Ensure correct content-type and content-length for POST requests
+        proxy_set_header Content-Type $http_content_type;
+        proxy_set_header Content-Length $content_length;
+
+        # NEW: Disable proxy_redirect to prevent Nginx from rewriting Location headers from Wiki.js
+        proxy_redirect off;
+    }
+}

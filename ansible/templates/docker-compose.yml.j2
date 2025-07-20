@@ -1,0 +1,41 @@
+    version: "3.9"
+
+    services:
+      wikijs:
+        image: requarks/wiki:2 # Using Wiki.js v2, check for v3 compatibility if desired
+        container_name: wikijs
+        restart: always
+        environment:
+          - DB_TYPE=${DB_TYPE}
+          - DB_HOST=${DB_HOST}
+          - DB_PORT=${DB_PORT}
+          - DB_USER=${DB_USER}
+          - DB_PASS=${DB_PASS}
+          - DB_NAME=${DB_NAME}
+          - DB_SSL=${DB_SSL}
+          - APP_PORT=${APP_PORT}
+        ports:
+          - "127.0.0.1:${APP_PORT}:${APP_PORT}" # Bind to localhost, Nginx will proxy
+        volumes:
+          - wikijs_data:/opt/wiki/data
+
+      db:
+        image: postgres:16-alpine # Using PostgreSQL 16
+        container_name: wikijs_db
+        restart: always
+        environment:
+          - POSTGRES_USER=${DB_USER}
+          - POSTGRES_PASSWORD=${DB_PASS}
+          - POSTGRES_DB=${DB_NAME}
+        volumes:
+          - db_data:/var/lib/postgresql/data
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+
+    volumes:
+      wikijs_data:
+      db_data:
+    

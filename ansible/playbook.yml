@@ -1,0 +1,244 @@
+---
+- name: Deploy Wiki.js on EC2
+  hosts: wikijs_servers
+  become: true # Run tasks with sudo privileges
+  vars:
+    wikijs_data_dir: /opt/wikijs
+    db_password: "YOUR_SECURE_DB_PASSWORD" # IMPORTANT: CHANGE THIS TO A STRONG PASSWORD
+    db_user: "wikijs_user"
+    db_name: "wikijs_db"
+    wikijs_port: 3000 # Default Wiki.js port
+    nginx_conf_path: /etc/nginx/sites-available/wikijs.conf
+    public_domain: "{{ public_domain_name }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        autoremove: yes
+
+    - name: Install required packages for Docker
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+        state: present
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+        state: present
+
+    - name: Install Docker CE
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: present
+
+    - name: Install Docker Compose
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-linux-x86_64" # Use a specific version
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Add 'ubuntu' user to 'docker' group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    # Ensure /etc/docker/daemon.json is absent to revert to default configuration
+    - name: Ensure /etc/docker/daemon.json is absent
+      file:
+        path: /etc/docker/daemon.json
+        state: absent
+      become: true
+
+    # Restart Docker service to apply any changes (like daemon.json removal) and pick up user group modification
+    - name: Restart Docker service to apply configuration and group changes
+      systemd:
+        name: docker
+        state: restarted
+        daemon_reload: yes # Ensure systemd reloads daemon if config changed
+      become: true
+      register: docker_restart_result
+      ignore_errors: true # Temporarily ignore errors here to get diagnostics
+
+    # Get systemctl status of docker.service
+    - name: Get docker service status (if restart failed)
+      shell: systemctl status docker.service
+      register: systemctl_status_output
+      changed_when: false
+      failed_when: false # Don't fail if status command itself returns non-zero
+      when: docker_restart_result.failed
+    - debug:
+        var: systemctl_status_output.stdout_lines
+      when: docker_restart_result.failed
+
+    # Get journalctl logs for docker.service
+    - name: Get docker service journal logs (if restart failed)
+      shell: journalctl -xeu docker.service
+      register: journalctl_logs_output
+      changed_when: false
+      failed_when: false # Don't fail if journalctl itself returns non-zero
+      when: docker_restart_result.failed
+    - debug:
+        var: journalctl_logs_output.stdout_lines
+      when: docker_restart_result.failed
+
+    - name: Ensure Docker service is running and enabled (post-restart)
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # Wait for the Docker socket to be available after potential restart
+    - name: Wait for Docker socket to be ready
+      wait_for:
+        path: /var/run/docker.sock
+        state: present
+        timeout: 60 # Wait up to 60 seconds for the socket
+      become: true
+
+    # Verify Docker daemon accessibility for the user (simplified, relies on daemon.json)
+    - name: Verify Docker daemon is accessible
+      shell: /usr/bin/docker info
+      register: docker_info_output
+      changed_when: false
+      failed_when: docker_info_output.rc != 0
+      become: true
+      become_user: ubuntu # Run as ubuntu to test user's access
+    - debug:
+        var: docker_info_output.stdout_lines
+
+    # NEW DIAGNOSTIC: Check docker-compose version
+    - name: Check docker-compose version
+      shell: /usr/local/bin/docker-compose version
+      register: docker_compose_version_output
+      changed_when: false
+      become: true
+      become_user: ubuntu
+    - debug:
+        var: docker_compose_version_output.stdout_lines
+
+    - name: Create Wiki.js data directory
+      file:
+        path: "{{ wikijs_data_dir }}"
+        state: directory
+        mode: '0755'
+        owner: ubuntu
+        group: ubuntu
+
+    - name: Create .env file for Docker Compose
+      template:
+        src: templates/env.j2
+        dest: "{{ wikijs_data_dir }}/.env"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    # Read and display content of generated .env file
+    - name: Read generated .env file content
+      shell: cat "{{ wikijs_data_dir }}/.env"
+      register: env_file_content
+      changed_when: false
+      failed_when: false
+    - debug:
+        var: env_file_content.stdout_lines
+
+    - name: Create docker-compose.yml for Wiki.js
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ wikijs_data_dir }}/docker-compose.yml"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    # Read and display content of generated docker-compose.yml
+    - name: Read generated docker-compose.yml content
+      shell: cat "{{ wikijs_data_dir }}/docker-compose.yml"
+      register: docker_compose_file_content
+      changed_when: false
+      failed_when: false # Don't fail the playbook if cat fails, just report
+    - debug:
+        var: docker_compose_file_content.stdout_lines
+
+    # Stop and remove existing Docker Compose services to force a clean rebuild
+    - name: Stop and remove existing Docker Compose services
+      shell: /usr/local/bin/docker-compose -p wikijs down # Added -p wikijs
+      args:
+        chdir: "{{ wikijs_data_dir }}"
+      become: true
+      become_user: ubuntu
+      ignore_errors: true # Ignore if services are not running (first run)
+
+    # Start Docker Compose services (now with a guaranteed clean slate and forced recreation)
+    - name: Start Docker Compose services
+      shell: /usr/local/bin/docker-compose -p wikijs up -d --force-recreate # Added -p wikijs
+      args:
+        chdir: "{{ wikijs_data_dir }}"
+      become: true
+      become_user: ubuntu # Run as ubuntu to ensure correct permissions
+      environment:
+        # Pass environment variables needed by docker-compose (from .env)
+        DB_HOST: db
+        DB_PORT: 5432
+        DB_USER: "{{ db_user }}"
+        DB_PASS: "{{ db_password }}"
+        DB_NAME: "{{ db_name }}"
+        DB_SSL: "false"
+        APP_PORT: "{{ wikijs_port }}"
+
+    # NEW DIAGNOSTIC: List all Docker volumes
+    - name: List all Docker volumes
+      shell: docker volume ls
+      register: docker_volume_ls_output
+      changed_when: false
+      become: true
+      become_user: ubuntu
+    - debug:
+        var: docker_volume_ls_output.stdout_lines
+
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Create Nginx configuration for Wiki.js
+      template:
+        src: templates/nginx.conf.j2
+        dest: "{{ nginx_conf_path }}"
+      notify: Restart Nginx
+
+    - name: Enable Nginx site
+      file:
+        src: "{{ nginx_conf_path }}"
+        dest: /etc/nginx/sites-enabled/wikijs.conf
+        state: link
+      notify: Restart Nginx
+
+    - name: Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Restart Nginx
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
