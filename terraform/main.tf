@@ -53,15 +53,6 @@ resource "aws_security_group" "ec2_sg" {
   name        = "${var.project_name}-EC2-SG"
   description = "Security group for Wiki.js EC2 instance"
 
-  # SSH access
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.ssh_ingress_cidrs
-    description = "Allow SSH access"
-  }
-
   # HTTP access from CloudFront (or direct for testing)
   ingress {
     from_port   = 80
