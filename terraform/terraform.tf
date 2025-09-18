@@ -2,7 +2,7 @@ terraform {
   backend "s3" {
     bucket       = "tfstate-wiki.js"
     key          = "terraform/terraform.tfstate"
-    region       = var.aws_region
+    region       = "ap-southeast-2"
     use_lockfile = true
     encrypt      = true
   }
