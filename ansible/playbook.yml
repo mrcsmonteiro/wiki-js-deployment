@@ -1,15 +1,10 @@
 ---
 - name: Deploy Wiki.js on EC2
   hosts: wikijs_servers
+  gather_facts: yes
   become: true # Run tasks with sudo privileges
-  vars:
-    wikijs_data_dir: /opt/wikijs
-    db_password: "YOUR_SECURE_DB_PASSWORD" # IMPORTANT: CHANGE THIS TO A STRONG PASSWORD
-    db_user: "wikijs_user"
-    db_name: "wikijs_db"
-    wikijs_port: 3000 # Default Wiki.js port
-    nginx_conf_path: /etc/nginx/sites-available/wikijs.conf
-    public_domain: "{{ public_domain_name }}"
+  vars_files:
+    - vars.yml
 
   tasks:
     - name: Update apt cache
