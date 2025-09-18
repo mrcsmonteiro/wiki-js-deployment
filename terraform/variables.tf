@@ -19,13 +19,13 @@ variable "domain_name" {
 variable "public_hosted_zone_name" {
   description = "The name of your existing public Route 53 hosted zone (e.g., marcosms.com.au)."
   type        = string
-  default = "marcosms.com.au"
+  default     = "marcosms.com.au"
 }
 
 variable "existing_acm_certificate_arn" {
   description = "The ARN of your existing ACM certificate for the domain."
   type        = string
-  default = "arn:aws:acm:us-east-1:460637121552:certificate/eabe8a0c-142d-4591-83d2-2ff6ba8c08e4" # Replace 123456789012 with your AWS Account ID
+  default     = "arn:aws:acm:us-east-1:460637121552:certificate/eabe8a0c-142d-4591-83d2-2ff6ba8c08e4" # Replace 123456789012 with your AWS Account ID
 }
 
 variable "acm_certificate_region" {
@@ -55,7 +55,7 @@ variable "key_pair_name" {
 variable "ssh_ingress_cidrs" {
   description = "List of CIDR blocks allowed to SSH into the EC2 instance."
   type        = list(string)
-  default = ["0.0.0.0/0"]
+  default     = ["0.0.0.0/0"]
 }
 
 variable "vpc_cidr_block" {
