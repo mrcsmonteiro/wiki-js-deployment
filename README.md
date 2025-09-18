@@ -4,7 +4,6 @@
 
 ## Table of Contents
 - [Overview](#overview)
-- [Usage](#usage)
 
 ## Overview
 
@@ -12,7 +11,7 @@ This repository provides a comprehensive and automated solution for deploying a 
 
 This deployment uses an Infrastructure as Code (IaC) approach, so the entire infrastructure can be versioned, shared, and re-used.
 
-### Architecture
+### Terraform Provisioning
 
 The core components of this infrastructure work together to create a robust setup:
 
@@ -31,3 +30,14 @@ The core components of this infrastructure work together to create a robust setu
 - **Ansible Provisioning**: A `null_resource` in Terraform executes an **Ansible playbook** on the newly created EC2 instance. This is a crucial step for installing and configuring the Wiki.js application, its dependencies, and the database. The `null_resource` uses a `local-exec` provisioner to run Ansible from your local machine. It has a `depends_on` rule to ensure it only runs after the EC2 instance is available. A `triggers` block is also used to hash the content of the Ansible playbooks, forcing a re-run if any changes are made.
 - **Outputs**: Several outputs are defined to provide useful information after deployment, such as the public IP of the EC2 instance, the CloudFront domain name, and the `ssh` command for connecting to the server.
 - **Backend & Providers**: Terraform's state is stored remotely in an **S3 bucket**, enabling collaboration and preventing data loss. The configuration uses two **AWS providers**, one for the primary region of deployment and a second for `us-east-1`, which is required for creating CloudFront distributions with ACM certificates.
+
+### Ansible Provisioning
+
+The Ansible playbook automates the software installation and configuration on the EC2 instance. It is the final step in the deployment process, following the creation of all AWS resources by Terraform.
+
+#### Key Roles of the Ansible Playbook
+- **Docker & Docker Compose**: The playbook's primary function is to set up a **containerized environment** for Wiki.js. It installs **Docker** and **Docker Compose**, ensuring the `ubuntu` user has the necessary permissions to run Docker commands. This approach provides a portable and isolated environment for the application.
+- **Application Deployment**: It uses **Jinja2 templates** to dynamically create a `.env` file and a `docker-compose.yml` file. These files contain sensitive information and service definitions, respectively, based on variables defined in `vars.yml`. It then uses Docker Compose to pull the Wiki.js and PostgreSQL images and run them as services. The use of the `--force-recreate` flag ensures a clean deployment and an updated application.
+- **Nginx as a Reverse Proxy**: The playbook installs and configures **Nginx** to act as a reverse proxy. This allows Nginx to listen on standard **HTTP port 80** and forward requests to the Wiki.js container running on its internal port. It also handles the configuration for the custom domain name. Nginx is crucial for directing traffic from CloudFront to the correct application service.
+- **Idempotency and Diagnostics**: The playbook is designed to be **idempotent**, meaning it can be run multiple times without causing unintended changes. It includes several diagnostic steps (`debug` and `shell` commands) to check the status of Docker and Nginx services, which is useful for troubleshooting.
+- **Configuration**: The playbook is configured via `inventory.ini` and `vars.yml`. The `inventory.ini` file specifies the target host (the EC2 instance IP), while `vars.yml` contains key variables like domain names and database credentials.
