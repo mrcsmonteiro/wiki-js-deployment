@@ -21,5 +21,21 @@ resource "aws_security_group" "ec2_sg" {
     description = "Allow all outbound traffic"
   }
 
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow SSH from anywhere (for testing; restrict in production)"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1" # Allows all protocols
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
   tags = merge(var.tags, { Name = "${var.project_name}-EC2-SG" })
 }
