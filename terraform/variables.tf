@@ -14,21 +14,17 @@ variable "domain_name" {
   description = "Your public domain name for Wiki.js (e.g., wiki.example.com)."
   type        = string
   default     = "wiki.marcosms.com.au"
-  # IMPORTANT: Replace with your actual domain.
-  # Example: "wiki.marcosms.com.au"
 }
 
 variable "public_hosted_zone_name" {
   description = "The name of your existing public Route 53 hosted zone (e.g., marcosms.com.au)."
   type        = string
-  # IMPORTANT: Replace with your actual root domain.
   default = "marcosms.com.au"
 }
 
 variable "existing_acm_certificate_arn" {
   description = "The ARN of your existing ACM certificate for the domain."
   type        = string
-  # IMPORTANT: Replace with your actual certificate ARN.
   default = "arn:aws:acm:us-east-1:460637121552:certificate/eabe8a0c-142d-4591-83d2-2ff6ba8c08e4" # Replace 123456789012 with your AWS Account ID
 }
 
@@ -54,15 +50,11 @@ variable "key_pair_name" {
   description = "The name of your existing EC2 Key Pair for SSH access."
   type        = string
   default     = "wiki-ssh-key"
-  # IMPORTANT: Replace with your actual key pair name.
-  # Example: "my-ssh-key"
 }
 
 variable "ssh_ingress_cidrs" {
   description = "List of CIDR blocks allowed to SSH into the EC2 instance."
   type        = list(string)
-  # IMPORTANT: Restrict this to your public IP for security.
-  # Example: ["203.0.113.0/24"] or ["0.0.0.0/0"] for testing (less secure)
   default = ["0.0.0.0/0"]
 }
 
