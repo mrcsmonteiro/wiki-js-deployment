@@ -2,9 +2,13 @@
 
 # Required
 account_id                   = "<workload-account-id>"
+backup_central_account_id    = "<central-backup-account-id>"
 existing_acm_certificate_arn = "arn:aws:acm:us-east-1:<workload-account-id>:certificate/<certificate-id>"
+wikijs_prod_ami_id           = "<ami-id from packer/manifest.json>"
 
 # Optional overrides (defaults in variables.tf)
-# aws_profile = "marcosms-prod-admin"   # resource provisioning; state uses deployments-admin via backend-prod.hcl
-# aws_region  = "ap-southeast-2"
-# domain_name = "wiki.marcosms.com.au"
+# aws_profile        = "<profile for the workload account>"
+# aws_region         = "ap-southeast-2"
+# data_volume_size   = 20
+# domain_name        = "wiki.marcosms.com.au"
+# prod_instance_type = "t4g.small"

@@ -9,6 +9,34 @@ variable "aws_profile" {
   default     = "marcosms-prod-admin"
 }
 
+variable "backup_central_account_id" {
+  description = "Account ID of the Control Tower central backup account (copies of the data volume backups go there). Set in terraform.tfvars."
+  type        = string
+}
+
+variable "data_volume_size" {
+  description = "Size in GiB of the persistent data volume (Docker data-root and the PCA app directory)."
+  type        = number
+  default     = 20
+}
+
+variable "db_password_parameter" {
+  description = "SSM Parameter Store name of the Wiki.js database password (SecureString, created by hand)."
+  type        = string
+  default     = "/wiki-js/prod/db-password"
+}
+
+variable "prod_instance_type" {
+  description = "Instance type for the new Wiki.js host (arm64)."
+  type        = string
+  default     = "t4g.small"
+}
+
+variable "wikijs_prod_ami_id" {
+  description = "Packer-built image for the new Wiki.js host (packer/manifest.json). Set in terraform.tfvars."
+  type        = string
+}
+
 variable "aws_region" {
   description = "The AWS region to deploy resources in."
   type        = string
