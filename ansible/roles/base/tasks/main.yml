@@ -1,0 +1,197 @@
+---
+- name: Upgrade all packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: dist
+    autoremove: true
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+      - jq
+      - python3-debian # needed by deb822_repository
+      - unattended-upgrades
+    state: present
+
+- name: Install AWS CLI v2 (used at boot to read the DB password from SSM)
+  ansible.builtin.command: snap install aws-cli --classic
+  args:
+    creates: /snap/bin/aws
+
+# --- Docker ---------------------------------------------------------------
+
+- name: Create the apt keyrings directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Docker apt repository
+  ansible.builtin.deb822_repository:
+    name: docker
+    types: [deb]
+    uris: https://download.docker.com/linux/ubuntu
+    suites: ["{{ ansible_facts['distribution_release'] }}"]
+    components: [stable]
+    architectures: ["{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"]
+    signed_by: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Install Docker Engine and the Compose plugin
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+# Docker starts on install with the default data-root. Stop it before pointing
+# data-root at /data, so nothing is written to the root disk of the image.
+- name: Stop Docker for the rest of the build
+  ansible.builtin.systemd_service:
+    name: "{{ item }}"
+    state: stopped
+  loop:
+    - docker.socket
+    - docker.service
+
+- name: Remove data written by the first Docker start
+  ansible.builtin.file:
+    path: /var/lib/docker
+    state: absent
+
+- name: Configure Docker (data on /data, log rotation)
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+    content: |
+      {
+        "data-root": "{{ data_mount }}/docker",
+        "log-driver": "json-file",
+        "log-opts": { "max-size": "10m", "max-file": "3" },
+        "live-restore": true
+      }
+
+- name: Create Docker systemd drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: "0755"
+
+# If the data volume is missing, Docker does not start, so it can never write
+# volumes to the root disk by mistake.
+- name: Make Docker wait for the data volume
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/10-data-mount.conf
+    mode: "0644"
+    content: |
+      [Unit]
+      RequiresMountsFor={{ data_mount }}
+
+- name: Enable Docker at boot
+  ansible.builtin.systemd_service:
+    name: docker.service
+    enabled: true
+    daemon_reload: true
+
+# --- Data volume and PCA bind mount ----------------------------------------
+
+- name: Create mount points
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ data_mount }}"
+    - "{{ pca_dir }}"
+
+- name: Mount the data volume by label
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^LABEL={{ data_volume_label }}\s'
+    line: "LABEL={{ data_volume_label }}  {{ data_mount }}  ext4  defaults,nofail,x-systemd.device-timeout=30s  0  2"
+
+- name: Bind-mount the PCA app directory from the data volume
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^{{ data_mount }}/pca-exam-platform\s'
+    line: "{{ data_mount }}/pca-exam-platform  {{ pca_dir }}  none  bind,nofail,x-systemd.requires-mounts-for={{ data_mount }}  0  0"
+
+# --- Swap ---------------------------------------------------------------------
+
+- name: Create swap file
+  ansible.builtin.command: fallocate -l {{ swap_size }} /swapfile
+  args:
+    creates: /swapfile
+  register: swapfile
+
+- name: Restrict swap file permissions
+  ansible.builtin.file:
+    path: /swapfile
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Format swap file
+  ansible.builtin.command: mkswap /swapfile
+  when: swapfile is changed
+
+- name: Enable swap at boot
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    regexp: '^/swapfile\s'
+    line: "/swapfile  none  swap  sw  0  0"
+
+- name: Prefer RAM over swap
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/60-swappiness.conf
+    mode: "0644"
+    content: "vm.swappiness = 10\n"
+
+# --- Patching and SSH -----------------------------------------------------------
+
+- name: Enable unattended security upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+
+# Reboots are planned (Patch Manager, Task 14), never automatic.
+- name: Disable automatic reboots after upgrades
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52unattended-upgrades-local
+    mode: "0644"
+    content: |
+      Unattended-Upgrade::Automatic-Reboot "false";
+
+- name: Harden SSH (key-only, no root)
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    mode: "0644"
+    content: |
+      PermitRootLogin no
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      X11Forwarding no
+      MaxAuthTries 3
+
+# Ubuntu 24.04 starts sshd through a socket, so this directory may not exist yet.
+- name: Create the sshd privilege separation directory
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    mode: "0755"
+
+- name: Check the SSH configuration
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false

@@ -1,0 +1,38 @@
+---
+# Lays down the compose project and a boot-time unit. Nothing is started during
+# the image build: images are pulled and containers created on the instance.
+- name: Create the Wiki.js directory
+  ansible.builtin.file:
+    path: "{{ wikijs_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Add the compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ wikijs_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Add the boot-time .env renderer
+  ansible.builtin.template:
+    src: wikijs-render-env.sh.j2
+    dest: /usr/local/sbin/wikijs-render-env
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Add the Wiki.js systemd unit
+  ansible.builtin.template:
+    src: wikijs.service.j2
+    dest: /etc/systemd/system/wikijs.service
+    mode: "0644"
+
+- name: Enable Wiki.js at boot (not started during the build)
+  ansible.builtin.systemd_service:
+    name: wikijs.service
+    enabled: true
+    daemon_reload: true

@@ -1,0 +1,54 @@
+# Managed by Ansible (wiki-js-deployment). Values for ${...} come from .env,
+# which wikijs-render-env writes at boot from SSM Parameter Store.
+#
+# The project name stays "wikijs", so volumes are wikijs_db_data and
+# wikijs_wikijs_data, as on the previous host.
+name: wikijs
+
+services:
+  db:
+    image: {{ postgres_image }}
+    container_name: wikijs_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 384m
+
+  wikijs:
+    image: {{ wikijs_image }}
+    container_name: wikijs
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+    ports:
+      # Loopback only; host nginx proxies. Never 8088 (that port is PCA's).
+      - "127.0.0.1:{{ wikijs_port }}:3000"
+    volumes:
+      # Wiki.js data path is /wiki/data (cache, uploads, local Git storage repo).
+      - wikijs_data:/wiki/data
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 768m
+
+volumes:
+  db_data: {}
+  wikijs_data: {}

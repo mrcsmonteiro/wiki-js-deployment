@@ -1,0 +1,19 @@
+[Unit]
+Description=Wiki.js (docker compose project wikijs)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+RequiresMountsFor=/data
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory={{ wikijs_dir }}
+ExecStartPre=/usr/local/sbin/wikijs-render-env
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose stop
+# The first start pulls the images.
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

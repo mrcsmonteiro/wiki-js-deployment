@@ -68,13 +68,13 @@ rm -f tfplan
 
 Review the plan before applying. Delete the plan file afterwards.
 
-### 3. Configure the server (separate step)
+### 3. Build the server image (separate step)
+
+The server is built from an image, not configured in place. Packer starts a temporary instance, runs the Ansible roles in `ansible/roles/` (Docker, nginx, Wiki.js compose files) and saves an arm64 AMI. Nothing secret is baked in: at boot the instance reads the database password from SSM Parameter Store.
 
 ```bash
-cd ../ansible
-ansible-playbook playbook.yml
+packer init packer
+packer build packer
 ```
 
-The playbook needs `ansible/vars.yml` (git-ignored) with the domain and database settings.
-
-Warning: the playbook upgrades all packages, restarts Docker and nginx, and recreates the Wiki.js containers. On a host that runs other containers, that restarts them too. Review it before running it against a shared server.
+Requires Packer >= 1.16 and an AWS session for the workload account.

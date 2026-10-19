@@ -1,0 +1,13 @@
+---
+# Builds the Wiki.js host image. Run by Packer (packer/wikijs.pkr.hcl), not
+# against a live server. Nothing here starts Wiki.js or touches data: the data
+# volume and secrets only exist on the real instance at boot.
+- name: Build the Wiki.js host image
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - base
+    - nginx
+    - wikijs

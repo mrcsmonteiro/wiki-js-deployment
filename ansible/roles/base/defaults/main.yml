@@ -1,0 +1,10 @@
+---
+# Filesystem label of the persistent data volume (formatted once, at first use).
+data_volume_label: app-data
+data_mount: /data
+
+# PCA Practice lives on the data volume and is bind-mounted to its usual path,
+# so its own files and compose project need no changes.
+pca_dir: /opt/pca-exam-platform
+
+swap_size: 1G

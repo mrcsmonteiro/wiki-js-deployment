@@ -1,0 +1,14 @@
+---
+wikijs_dir: /opt/wikijs
+wikijs_port: 3000
+
+# Overridden by Packer (packer/wikijs.pkr.hcl) so the pins live in one place.
+wikijs_image: "requarks/wiki:2.5.316@sha256:fffff288a52f76e5b8c19a4fbcd0f3e538e96edea642c4f2d813d54d59a876de"
+postgres_image: "postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
+
+wikijs_db_name: wikijs_db
+wikijs_db_user: wikijs
+
+# SSM Parameter Store SecureString with the DB password. Created by hand, never
+# in this repo or in Terraform state. Letters, digits, '_' and '-' only.
+wikijs_db_password_parameter: /wiki-js/prod/db-password

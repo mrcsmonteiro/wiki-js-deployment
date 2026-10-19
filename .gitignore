@@ -12,6 +12,10 @@ crash.log
 # Backend settings contain the Deployments account ID; commit only the .example
 terraform/backend-prod.hcl
 
+# Packer build output
+packer/manifest.json
+packer_cache/
+
 # Ansible secrets
 vars.yml
 

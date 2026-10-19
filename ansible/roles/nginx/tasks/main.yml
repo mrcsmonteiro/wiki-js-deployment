@@ -1,0 +1,36 @@
+---
+# certbot is installed for the PCA vhost, which is copied in separately
+# (it is not managed by this repo). No global nginx settings are changed.
+- name: Install nginx and certbot
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Add the Wiki.js vhost
+  ansible.builtin.template:
+    src: wikijs.conf.j2
+    dest: /etc/nginx/sites-available/wikijs.conf
+    mode: "0644"
+
+- name: Enable the Wiki.js vhost
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/wikijs.conf
+    dest: /etc/nginx/sites-enabled/wikijs.conf
+    state: link
+
+- name: Remove the default site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Check the nginx configuration
+  ansible.builtin.command: nginx -t
+  changed_when: false
+
+- name: Enable nginx at boot
+  ansible.builtin.systemd_service:
+    name: nginx
+    enabled: true

@@ -1,0 +1,31 @@
+#!/bin/bash
+# Writes {{ wikijs_dir }}/.env at boot. The DB password is read from SSM
+# Parameter Store with the instance role; it is never stored in the image.
+set -euo pipefail
+umask 077
+
+imds=http://169.254.169.254/latest
+token=$(curl -fsS -X PUT "$imds/api/token" -H 'X-aws-ec2-metadata-token-ttl-seconds: 60')
+region=$(curl -fsS -H "X-aws-ec2-metadata-token: $token" "$imds/meta-data/placement/region")
+
+db_pass=$(/snap/bin/aws ssm get-parameter \
+  --region "$region" \
+  --name '{{ wikijs_db_password_parameter }}' \
+  --with-decryption \
+  --query Parameter.Value \
+  --output text)
+
+# Compose interpolates '$' in .env values, so only allow a safe character set.
+if [[ -z "$db_pass" || ! "$db_pass" =~ ^[A-Za-z0-9_-]+$ ]]; then
+  echo "wikijs-render-env: parameter '{{ wikijs_db_password_parameter }}' is empty or has characters other than A-Z a-z 0-9 _ -" >&2
+  exit 1
+fi
+
+tmp=$(mktemp '{{ wikijs_dir }}/.env.XXXXXX')
+cat > "$tmp" <<EOF
+DB_USER={{ wikijs_db_user }}
+DB_NAME={{ wikijs_db_name }}
+DB_PASS=${db_pass}
+EOF
+chmod 600 "$tmp"
+mv -f "$tmp" '{{ wikijs_dir }}/.env'
