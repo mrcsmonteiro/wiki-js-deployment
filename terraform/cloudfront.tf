@@ -55,4 +55,8 @@ resource "aws_cloudfront_distribution" "wikijs_cdn" {
   }
 
   tags = merge(var.tags, { Name = "${var.project_name}-CloudFront" })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }

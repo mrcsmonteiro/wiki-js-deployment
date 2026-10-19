@@ -39,4 +39,8 @@ resource "aws_security_group" "ec2_sg" {
   }
 
   tags = merge(var.tags, { Name = "${var.project_name}-EC2-SG" })
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }

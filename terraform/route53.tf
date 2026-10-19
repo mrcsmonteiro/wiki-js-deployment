@@ -11,6 +11,10 @@ resource "aws_route53_record" "wikijs_origin_record" {
   type    = "A"
   ttl     = 300
   records = [aws_eip.wikijs_eip.public_ip]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Alias record for public domain to CloudFront
@@ -22,5 +26,9 @@ resource "aws_route53_record" "wikijs_cname" {
     name                   = aws_cloudfront_distribution.wikijs_cdn.domain_name
     zone_id                = aws_cloudfront_distribution.wikijs_cdn.hosted_zone_id
     evaluate_target_health = false
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }

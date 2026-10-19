@@ -81,12 +81,8 @@ variable "public_subnet_cidr_block" {
 }
 
 variable "tags" {
-  description = "A map of tags to apply to all resources."
+  description = "Extra tags merged on top of the provider default_tags. Workload tags (Environment, ManagedBy, ...) come from default_tags in providers.tf; do not repeat them here."
   type        = map(string)
-  default = {
-    Project     = "WikiJS"
-    Environment = "Production"
-    ManagedBy   = "Terraform"
-  }
+  default     = {}
 }
 
