@@ -4,6 +4,7 @@
 
 ## Table of Contents
 - [Overview](#overview)
+- [Usage](#usage)
 
 ## Overview
 
@@ -13,12 +14,12 @@ This deployment uses an Infrastructure as Code (IaC) approach, so the entire inf
 
 ### Terraform Provisioning
 
-The core components of this infrastructure work together to create a robust setup:
+The core components:
 
 - **VPC, Subnet, and Internet Gateway**: A dedicated **Virtual Private Cloud (VPC)** isolates the Wiki.js environment. A single public subnet is created within this VPC, connected to the internet via an **Internet Gateway (IGW)**. This setup provides a secure and organized network foundation.
 - **EC2 Instance & Elastic IP**: A single **EC2 (Elastic Compute Cloud)** instance serves as the Wiki.js application server. An **Elastic IP (EIP)** is associated with the instance, giving it a fixed public IP address. The instance is configured to automatically update itself on launch using `user_data`, preparing it for subsequent provisioning.
 - **IAM Role**: An **IAM (Identity and Access Management) Role** is created and attached to the EC2 instance. This allows the instance to securely interact with other AWS services, specifically enabling **AWS Systems Manager (SSM)** for potential future management without the need for SSH keys.
-- **Security Groups**: A **Security Group** acts as a virtual firewall for the EC2 instance, allowing only necessary traffic. It permits inbound **HTTP (port 80)** traffic from anywhere (for the CloudFront distribution to connect) and **SSH (port 22)** access for management. All outbound traffic is allowed.
+- **Security Groups**: A **Security Group** acts as a virtual firewall for the EC2 instance. It allows inbound **HTTP (port 80)** from anywhere (CloudFront connects to the origin over HTTP), **HTTPS (port 443)** for another site served directly from the same instance, and **SSH (port 22)** for management. All outbound traffic is allowed.
 - **CloudFront Distribution (CDN)**: A **CloudFront Content Delivery Network (CDN)** sits in front of the EC2 instance. It handles all incoming user requests, providing several key benefits:
   - **HTTPS Enforcement**: All traffic from users is forced to use HTTPS, and CloudFront securely handles the SSL termination using an existing AWS Certificate Manager (ACM) certificate.
   - **Geographic Latency Reduction**: It caches content closer to end-users, reducing latency.
@@ -27,13 +28,13 @@ The core components of this infrastructure work together to create a robust setu
 - **Route 53 Records**: Route 53 manages the domain routing. Two records are created:
   - An **A record** (`origin.yourdomain.com`) that points directly to the EC2 instance's Elastic IP. This is used as the origin for the CloudFront distribution.
   - An **Alias record** (`yourdomain.com`) that points to the CloudFront distribution's domain name, effectively routing all public traffic through the CDN.
-- **Ansible Provisioning**: A `null_resource` in Terraform executes an **Ansible playbook** on the newly created EC2 instance. This is a crucial step for installing and configuring the Wiki.js application, its dependencies, and the database. The `null_resource` uses a `local-exec` provisioner to run Ansible from your local machine. It has a `depends_on` rule to ensure it only runs after the EC2 instance is available. A `triggers` block is also used to hash the content of the Ansible playbooks, forcing a re-run if any changes are made.
+- **Ansible Provisioning**: Terraform no longer runs Ansible. The earlier `null_resource` with a `local-exec` provisioner was removed, so `terraform apply` only changes AWS resources and never reconfigures the running server as a side effect. Run the playbook as a separate step (see [Usage](#usage)).
 - **Outputs**: Several outputs are defined to provide useful information after deployment, such as the public IP of the EC2 instance, the CloudFront domain name, and the `ssh` command for connecting to the server.
-- **Backend & Providers**: Terraform's state is stored remotely in an **S3 bucket**, enabling collaboration and preventing data loss. The configuration uses two **AWS providers**, one for the primary region of deployment and a second for `us-east-1`, which is required for creating CloudFront distributions with ACM certificates.
+- **Backend & Providers**: State is stored in a shared **S3 bucket** in a separate deployments account, with S3 native state locking. `backend.tf` sets only the state key; the bucket, region and profile come from `backend-prod.hcl` (copy it from `backend-prod.hcl.example`). There are two **AWS providers**: one for the main region and one for `us-east-1`, which CloudFront needs for its ACM certificate. Both use a named AWS CLI profile, an `allowed_account_ids` guard and `default_tags`, so every resource gets the same set of tags.
 
 ### Ansible Provisioning
 
-The Ansible playbook automates the software installation and configuration on the EC2 instance. It is the final step in the deployment process, following the creation of all AWS resources by Terraform.
+The Ansible playbook automates the software installation and configuration on the EC2 instance. Run it separately from Terraform, after the AWS resources exist.
 
 #### Key Roles of the Ansible Playbook
 - **Docker & Docker Compose**: The playbook's primary function is to set up a **containerized environment** for Wiki.js. It installs **Docker** and **Docker Compose**, ensuring the `ubuntu` user has the necessary permissions to run Docker commands. This approach provides a portable and isolated environment for the application.
@@ -41,3 +42,39 @@ The Ansible playbook automates the software installation and configuration on th
 - **Nginx as a Reverse Proxy**: The playbook installs and configures **Nginx** to act as a reverse proxy. This allows Nginx to listen on standard **HTTP port 80** and forward requests to the Wiki.js container running on its internal port. It also handles the configuration for the custom domain name. Nginx is crucial for directing traffic from CloudFront to the correct application service.
 - **Idempotency and Diagnostics**: The playbook is designed to be **idempotent**, meaning it can be run multiple times without causing unintended changes. It includes several diagnostic steps (`debug` and `shell` commands) to check the status of Docker and Nginx services, which is useful for troubleshooting.
 - **Configuration**: The playbook is configured via `inventory.ini` and `vars.yml`. The `inventory.ini` file specifies the target host (the EC2 instance IP), while `vars.yml` contains key variables like domain names and database credentials.
+
+## Usage
+
+Prerequisites: Terraform >= 1.10, AWS CLI v2 with named profiles for the deployments account (state) and the workload account (resources).
+
+### 1. Configure
+
+```bash
+cd terraform
+cp backend-prod.hcl.example backend-prod.hcl          # set the state bucket name
+cp terraform.tfvars.example terraform.tfvars          # set account_id and the ACM certificate ARN
+```
+
+Both files are git-ignored.
+
+### 2. Plan and apply
+
+```bash
+terraform init -backend-config=backend-prod.hcl
+terraform plan -out tfplan
+terraform apply tfplan
+rm -f tfplan
+```
+
+Review the plan before applying. Delete the plan file afterwards.
+
+### 3. Configure the server (separate step)
+
+```bash
+cd ../ansible
+ansible-playbook playbook.yml
+```
+
+The playbook needs `ansible/vars.yml` (git-ignored) with the domain and database settings.
+
+Warning: the playbook upgrades all packages, restarts Docker and nginx, and recreates the Wiki.js containers. On a host that runs other containers, that restarts them too. Review it before running it against a shared server.

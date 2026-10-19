@@ -1,3 +1,14 @@
+variable "account_id" {
+  description = "AWS account ID of the workload account, used as an allowed_account_ids guard. Set in terraform.tfvars."
+  type        = string
+}
+
+variable "aws_profile" {
+  description = "Named AWS CLI profile for resource provisioning (marcosms-Prod)."
+  type        = string
+  default     = "marcosms-prod-admin"
+}
+
 variable "aws_region" {
   description = "The AWS region to deploy resources in."
   type        = string
@@ -23,9 +34,8 @@ variable "public_hosted_zone_name" {
 }
 
 variable "existing_acm_certificate_arn" {
-  description = "The ARN of your existing ACM certificate for the domain."
+  description = "The ARN of the existing ACM certificate (us-east-1) for the domain. Set in terraform.tfvars."
   type        = string
-  default     = "arn:aws:acm:us-east-1:460637121552:certificate/eabe8a0c-142d-4591-83d2-2ff6ba8c08e4" # Replace 123456789012 with your AWS Account ID
 }
 
 variable "acm_certificate_region" {

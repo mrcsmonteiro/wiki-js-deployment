@@ -1,4 +1,20 @@
 .vscode/*
+
+# Terraform
 terraform.tfstate*
-terraform/.terraform/*
+**/.terraform/*
+*.tfvars
+!*.tfvars.example
+tfplan
+*.tfplan
+crash.log
+
+# Backend settings contain the Deployments account ID; commit only the .example
+terraform/backend-prod.hcl
+
+# Ansible secrets
 vars.yml
+
+# Kiro specs and steering: they hold account IDs, resource IDs and PCA security
+# details, so they stay out of this public repo (versioned privately instead).
+.kiro/

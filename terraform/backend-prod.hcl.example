@@ -1,0 +1,14 @@
+# Shared S3 backend settings for production workload state.
+#
+# Copy to backend-prod.hcl (git-ignored) and replace the placeholder. The real
+# values mirror the platform repo's backend-prod.hcl. The bucket lives in the
+# Deployments account; state auth uses deployments-admin, resource auth uses the
+# stack's own profile.
+#
+# Usage:
+#   terraform init -backend-config=backend-prod.hcl
+bucket       = "tfstate-prod-<deployments-account-id>-ap-southeast-2-an"
+region       = "ap-southeast-2"
+profile      = "deployments-admin"
+encrypt      = true
+use_lockfile = true
