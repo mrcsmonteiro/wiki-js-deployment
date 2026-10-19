@@ -24,9 +24,11 @@ resource "aws_instance" "wikijs_server" {
   }
 }
 
-# Elastic IP for the EC2 instance
+# Elastic IP: the public address of both sites (CloudFront origin record and PCA DNS).
+# Cutover (Task 12) moved it from the old instance (aws_instance.wikijs_server) to the new
+# one. Rollback = point it back at aws_instance.wikijs_server and apply.
 resource "aws_eip" "wikijs_eip" {
-  instance = aws_instance.wikijs_server.id
+  instance = aws_instance.wikijs_prod.id
   domain   = "vpc"
   tags     = merge(var.tags, { Name = "${var.project_name}-WikiJS-EIP" })
 
