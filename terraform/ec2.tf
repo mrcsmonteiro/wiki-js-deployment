@@ -16,11 +16,14 @@ resource "aws_instance" "wikijs_server" {
               sudo apt upgrade -y
               EOF
 
-  # This instance also hosts an unmanaged app (PCA). Never replace or destroy it
-  # from Terraform; a changed AMI or user_data must not force a rebuild.
+  # Old host, stopped after the cutover and kept for rollback until Task 15.
+  # Never replace or destroy it from Terraform: a changed AMI or user_data must
+  # not force a rebuild, and neither may the public IP it lost when it stopped
+  # (refresh then reads associate_public_ip_address = false, which forces
+  # replacement).
   lifecycle {
     prevent_destroy = true
-    ignore_changes  = [ami, user_data, user_data_base64]
+    ignore_changes  = [ami, user_data, user_data_base64, associate_public_ip_address]
   }
 }
 

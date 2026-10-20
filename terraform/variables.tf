@@ -9,6 +9,18 @@ variable "aws_profile" {
   default     = "marcosms-prod-admin"
 }
 
+variable "backup_retention_days" {
+  description = "Days to keep nightly backups in the backup bucket."
+  type        = number
+  default     = 35
+}
+
+variable "patch_window_schedule" {
+  description = "Weekly patch window, in the window's own timezone (Australia/Melbourne). Default: Sunday 02:00."
+  type        = string
+  default     = "cron(0 2 ? * SUN *)"
+}
+
 variable "backup_central_account_id" {
   description = "Account ID of the Control Tower central backup account (copies of the data volume backups go there). Set in terraform.tfvars."
   type        = string

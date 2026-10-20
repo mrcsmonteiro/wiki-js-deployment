@@ -32,3 +32,8 @@ output "wikijs_prod_public_ip" {
   description = "Temporary public IP of the new Wiki.js host (until the Elastic IP moves at cutover)."
   value       = aws_instance.wikijs_prod.public_ip
 }
+
+output "backup_bucket_name" {
+  description = "Bucket for nightly Wiki.js and PCA backups."
+  value       = aws_s3_bucket.backups.bucket
+}
