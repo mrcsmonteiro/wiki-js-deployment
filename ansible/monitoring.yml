@@ -1,0 +1,13 @@
+---
+# Applies the monitoring role (and the updated backups role) to the running
+# host. Later images include both (image.yml).
+#
+#   ansible-playbook -i my-ec2, ansible/monitoring.yml
+- name: Install the CloudWatch agent, app probe and backup heartbeat
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - backups
+    - monitoring

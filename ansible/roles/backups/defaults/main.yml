@@ -15,3 +15,7 @@ backup_local_keep_days: 7
 backup_on_calendar: "*-*-* 03:30:00 UTC"
 
 wikijs_db_container: wikijs_db
+
+# Custom CloudWatch namespace for the BackupSucceeded heartbeat (see terraform/monitoring.tf).
+backup_metric_namespace: WikiJsProd
+backup_log: /var/log/wikijs-backup.log

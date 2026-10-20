@@ -1,0 +1,8 @@
+[Unit]
+Description=Health probe for Wiki.js and PCA (CloudWatch AppUp metric)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/app-probe
+TimeoutStartSec=60

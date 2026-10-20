@@ -2,6 +2,7 @@
 
 # Required
 account_id                   = "<workload-account-id>"
+alert_email                  = "<alerts@example.com>"
 backup_central_account_id    = "<central-backup-account-id>"
 existing_acm_certificate_arn = "arn:aws:acm:us-east-1:<workload-account-id>:certificate/<certificate-id>"
 wikijs_prod_ami_id           = "<ami-id from packer/manifest.json>"

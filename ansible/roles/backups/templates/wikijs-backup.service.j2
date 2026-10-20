@@ -8,3 +8,6 @@ RequiresMountsFor={{ backup_dir }}
 Type=oneshot
 ExecStart=/usr/local/sbin/wikijs-backup
 TimeoutStartSec=900
+# Also written to a file, which the CloudWatch agent ships to CloudWatch Logs.
+StandardOutput=append:{{ backup_log }}
+StandardError=append:{{ backup_log }}

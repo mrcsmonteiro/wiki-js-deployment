@@ -37,3 +37,8 @@ output "backup_bucket_name" {
   description = "Bucket for nightly Wiki.js and PCA backups."
   value       = aws_s3_bucket.backups.bucket
 }
+
+output "dashboard_name" {
+  description = "CloudWatch dashboard for the Wiki.js host."
+  value       = aws_cloudwatch_dashboard.host.dashboard_name
+}

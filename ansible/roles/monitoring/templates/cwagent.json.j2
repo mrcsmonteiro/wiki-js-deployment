@@ -1,0 +1,42 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "omit_hostname": true,
+    "run_as_user": "root"
+  },
+  "metrics": {
+    "namespace": "CWAgent",
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    },
+    "metrics_collected": {
+      "mem": {
+        "measurement": ["mem_used_percent"]
+      },
+      "swap": {
+        "measurement": ["swap_used_percent"]
+      },
+      "disk": {
+        "measurement": ["used_percent"],
+        "resources": ["/", "/data"],
+        "drop_device": true
+      }
+    }
+  },
+  "logs": {
+    "logs_collected": {
+      "files": {
+        "collect_list": [
+{% for log in cwagent_logs %}
+          {
+            "file_path": "{{ log.file }}",
+            "log_group_name": "{{ log.group }}",
+            "log_stream_name": "{instance_id}",
+            "timezone": "UTC"
+          }{{ "," if not loop.last else "" }}
+{% endfor %}
+        ]
+      }
+    }
+  }
+}

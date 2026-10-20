@@ -18,6 +18,19 @@
     - wikijs-backup.service
     - wikijs-backup.timer
 
+- name: Rotate the backup log
+  ansible.builtin.copy:
+    dest: /etc/logrotate.d/wikijs-backup
+    mode: "0644"
+    content: |
+      {{ backup_log }} {
+          monthly
+          rotate 6
+          compress
+          missingok
+          notifempty
+      }
+
 - name: Enable and start the backup timer
   ansible.builtin.systemd_service:
     name: wikijs-backup.timer

@@ -1,0 +1,97 @@
+---
+# --- CloudWatch agent, installed only after its signature checks out ---------------
+
+- name: Work out the package architecture
+  ansible.builtin.set_fact:
+    cwagent_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
+
+- name: Create a scratch directory for the agent download
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: cwagent
+  register: cwagent_tmp
+
+- name: Download the agent, its signature and the signing key
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "{{ cwagent_tmp.path }}/{{ item.name }}"
+    mode: "0644"
+  loop:
+    - { name: agent.deb, url: "{{ cwagent_base_url }}/ubuntu/{{ cwagent_arch }}/latest/amazon-cloudwatch-agent.deb" }
+    - { name: agent.deb.sig, url: "{{ cwagent_base_url }}/ubuntu/{{ cwagent_arch }}/latest/amazon-cloudwatch-agent.deb.sig" }
+    - { name: key.gpg, url: "{{ cwagent_base_url }}/assets/amazon-cloudwatch-agent.gpg" }
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Import the signing key into a throwaway keyring
+  ansible.builtin.command: >-
+    gpg --batch --no-default-keyring --keyring {{ cwagent_tmp.path }}/keyring.gpg
+    --import {{ cwagent_tmp.path }}/key.gpg
+  changed_when: false
+
+- name: Read the signing key fingerprint
+  ansible.builtin.command: >-
+    gpg --batch --no-default-keyring --keyring {{ cwagent_tmp.path }}/keyring.gpg
+    --with-colons --fingerprint
+  register: cwagent_fpr
+  changed_when: false
+
+- name: Check the key is the documented AWS CloudWatch Agent key
+  ansible.builtin.assert:
+    that: cwagent_key_fingerprint in cwagent_fpr.stdout
+    fail_msg: CloudWatch agent signing key fingerprint does not match; not installing.
+
+- name: Verify the package signature
+  ansible.builtin.command: >-
+    gpgv --keyring {{ cwagent_tmp.path }}/keyring.gpg
+    {{ cwagent_tmp.path }}/agent.deb.sig {{ cwagent_tmp.path }}/agent.deb
+  changed_when: false
+
+- name: Install the CloudWatch agent
+  ansible.builtin.apt:
+    deb: "{{ cwagent_tmp.path }}/agent.deb"
+
+- name: Remove the scratch directory
+  ansible.builtin.file:
+    path: "{{ cwagent_tmp.path }}"
+    state: absent
+
+- name: Configure the CloudWatch agent
+  ansible.builtin.template:
+    src: cwagent.json.j2
+    dest: /opt/aws/amazon-cloudwatch-agent/etc/wiki-js-prod.json
+    mode: "0644"
+  register: cwagent_config
+
+# fetch-config also enables the agent at boot and (re)starts it.
+- name: Load the agent configuration and start the agent
+  ansible.builtin.command: >-
+    /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
+    -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/wiki-js-prod.json
+  when: cwagent_config is changed
+
+# --- App probe (custom metric AppUp, every 5 minutes) ---------------------------------
+
+- name: Add the app probe script
+  ansible.builtin.template:
+    src: app-probe.sh.j2
+    dest: /usr/local/sbin/app-probe
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Add the app probe service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop:
+    - app-probe.service
+    - app-probe.timer
+
+- name: Enable and start the app probe timer
+  ansible.builtin.systemd_service:
+    name: app-probe.timer
+    enabled: true
+    state: started
+    daemon_reload: true

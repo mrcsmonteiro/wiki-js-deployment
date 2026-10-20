@@ -44,4 +44,8 @@ log "uploaded $(basename "$pca") ($(stat -c %s "$pca") bytes)"
 
 # --- Local retention (PCA's own script prunes its files after 30 days) -----------
 find "{{ backup_dir }}/wikijs" -maxdepth 1 -name 'wikijs-*.dump' -mtime +{{ backup_local_keep_days }} -delete
+
+# Heartbeat for the backup-missing alarm: only reached when everything above worked.
+$aws cloudwatch put-metric-data --region "$region" --namespace '{{ backup_metric_namespace }}' \
+  --metric-name BackupSucceeded --value 1 --unit Count
 log "done"

@@ -9,6 +9,23 @@ variable "aws_profile" {
   default     = "marcosms-prod-admin"
 }
 
+variable "alert_email" {
+  description = "Email address that receives alarm notifications. Set in terraform.tfvars (not committed)."
+  type        = string
+}
+
+variable "log_retention_days" {
+  description = "Days to keep host logs (nginx, backup) in CloudWatch Logs."
+  type        = number
+  default     = 30
+}
+
+variable "pca_domain_name" {
+  description = "Public name of the PCA Practice site on the same host (external health check only)."
+  type        = string
+  default     = "pca.marcosms.com.au"
+}
+
 variable "backup_retention_days" {
   description = "Days to keep nightly backups in the backup bucket."
   type        = number

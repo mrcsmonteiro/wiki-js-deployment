@@ -1,0 +1,18 @@
+---
+# CloudWatch agent: package signature is checked against this fingerprint
+# (AWS docs: "Verifying the signature of the CloudWatch agent package").
+cwagent_base_url: https://amazoncloudwatch-agent.s3.amazonaws.com
+cwagent_key_fingerprint: 937616F3450B7D806CBD9725D58167303B789C72
+
+metric_namespace: WikiJsProd
+probe_on_calendar: "*:0/5"
+
+wikijs_domain: wiki.marcosms.com.au
+
+# Log files -> CloudWatch log groups (created with retention by Terraform).
+cwagent_logs:
+  - { file: /var/log/nginx/access.log, group: /wiki-js-prod/nginx/wiki-access }
+  - { file: /var/log/nginx/error.log, group: /wiki-js-prod/nginx/wiki-error }
+  - { file: /var/log/nginx/pca.access.log, group: /wiki-js-prod/nginx/pca-access }
+  - { file: /var/log/nginx/pca.error.log, group: /wiki-js-prod/nginx/pca-error }
+  - { file: /var/log/wikijs-backup.log, group: /wiki-js-prod/backup }
