@@ -7,7 +7,7 @@ resource "aws_instance" "wikijs_server" {
   associate_public_ip_address = true # Will be replaced by EIP
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
   disable_api_termination     = true # Turn off before terminating (Task 15)
-  tags                        = merge(var.tags, { Name = "${var.project_name}-WikiJS-Server" })
+  tags                        = merge(var.tags, { Name = "wiki-js-legacy" })
 
   # User data to ensure system is updated and ready for Ansible
   user_data = <<-EOF
@@ -33,7 +33,7 @@ resource "aws_instance" "wikijs_server" {
 resource "aws_eip" "wikijs_eip" {
   instance = aws_instance.wikijs_prod.id
   domain   = "vpc"
-  tags     = merge(var.tags, { Name = "${var.project_name}-WikiJS-EIP" })
+  tags     = merge(var.tags, { Name = "${local.name_prefix}-eip" })
 
   # Public IP for both sites (CloudFront origin and PCA DNS). Losing it breaks both.
   lifecycle {

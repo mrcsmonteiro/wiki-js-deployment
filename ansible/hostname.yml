@@ -1,0 +1,11 @@
+---
+# Sets the OS hostname on the running host. Later images include it (image.yml).
+#
+#   ansible-playbook -i my-ec2, ansible/hostname.yml
+- name: Set the hostname
+  hosts: all
+  become: true
+  gather_facts: false
+
+  roles:
+    - hostname

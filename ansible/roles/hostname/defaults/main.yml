@@ -1,0 +1,3 @@
+---
+# OS hostname, matching the instance's Name tag.
+host_name: wiki-js-prod

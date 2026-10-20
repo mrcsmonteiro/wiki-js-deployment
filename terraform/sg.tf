@@ -34,7 +34,8 @@ resource "aws_security_group" "ec2_sg" {
   # profile with AmazonSSMManagedInstanceCore). Packer opens a temporary SG of
   # its own, limited to the builder's IP, during image builds.
 
-  tags = merge(var.tags, { Name = "${var.project_name}-EC2-SG" })
+  # The SG name itself stays: renaming a security group forces a replacement.
+  tags = merge(var.tags, { Name = "${local.name_prefix}-sg" })
 
   lifecycle {
     prevent_destroy = true

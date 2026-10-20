@@ -54,9 +54,9 @@ variable "root_volume_size" {
 }
 
 variable "subnet_name_tag" {
-  description = "Name tag of the public subnet to build in."
+  description = "Name tag of the public subnet to build in (terraform/network.tf)."
   type        = string
-  default     = "WikiJS-PublicSubnet"
+  default     = "wiki-js-prod-public-subnet"
 }
 
 variable "wikijs_image" {
