@@ -1,0 +1,12 @@
+---
+# Applies only the backups role to the running host. Used once for the host that
+# was built before this role existed; later images include it (image.yml).
+#
+#   ansible-playbook -i my-ec2, ansible/backups.yml
+- name: Install the nightly backup timer
+  hosts: all
+  become: true
+  gather_facts: true
+
+  roles:
+    - backups

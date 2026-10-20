@@ -1,0 +1,10 @@
+[Unit]
+Description=Nightly Wiki.js and PCA backups to S3
+Requires=docker.service
+After=docker.service wikijs.service
+RequiresMountsFor={{ backup_dir }}
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/wikijs-backup
+TimeoutStartSec=900

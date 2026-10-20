@@ -1,0 +1,26 @@
+---
+# The backup folders live on the data volume, which is not mounted during the
+# image build, so the script creates them at run time.
+- name: Add the backup script
+  ansible.builtin.template:
+    src: wikijs-backup.sh.j2
+    dest: /usr/local/sbin/wikijs-backup
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Add the backup service and timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop:
+    - wikijs-backup.service
+    - wikijs-backup.timer
+
+- name: Enable and start the backup timer
+  ansible.builtin.systemd_service:
+    name: wikijs-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true

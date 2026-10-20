@@ -1,0 +1,47 @@
+#!/bin/bash
+# Nightly backups, uploaded off the instance. Managed by Ansible (wiki-js-deployment).
+#   1. pg_dump (custom format) of the Wiki.js database, checked with pg_restore --list
+#   2. the newest PCA SQLite backup written by PCA's own cron (deploy/backup.sh)
+# Both are uploaded with the instance role, which may only PUT to wikijs/ and pca/.
+set -euo pipefail
+umask 077
+
+log() { echo "wikijs-backup: $*"; }
+
+imds=http://169.254.169.254/latest
+token=$(curl -fsS -X PUT "$imds/api/token" -H 'X-aws-ec2-metadata-token-ttl-seconds: 60')
+doc=$(curl -fsS -H "X-aws-ec2-metadata-token: $token" "$imds/dynamic/instance-identity/document")
+region=$(jq -r .region <<<"$doc")
+account=$(jq -r .accountId <<<"$doc")
+bucket="{{ backup_bucket_prefix }}-${account}-${region}-an"
+stamp=$(date -u +%Y%m%d-%H%M%S)
+aws=/snap/bin/aws
+mkdir -p -m 700 "{{ backup_dir }}/wikijs" "{{ backup_dir }}/pca"
+
+# --- Wiki.js ------------------------------------------------------------------
+dump="{{ backup_dir }}/wikijs/wikijs-${stamp}.dump"
+docker exec {{ wikijs_db_container }} sh -c 'pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB"' > "$dump"
+if [[ ! -s "$dump" ]]; then
+  log "Wiki.js dump is empty: $dump" >&2
+  exit 1
+fi
+# Proves the file is a readable custom-format archive, not a truncated one.
+docker exec -i {{ wikijs_db_container }} pg_restore --list < "$dump" > /dev/null
+$aws s3 cp "$dump" "s3://${bucket}/wikijs/$(basename "$dump")" --region "$region" --only-show-errors
+log "uploaded $(basename "$dump") ($(stat -c %s "$dump") bytes)"
+
+# --- PCA ------------------------------------------------------------------------
+# PCA's cron writes pca-*.sqlite3.gz at 03:15 UTC. Upload the newest one, and
+# fail if it is older than 26 hours (the cron did not run).
+pca=$(find "{{ backup_dir }}/pca" -maxdepth 1 -name 'pca-*.sqlite3.gz' -mmin -1560 -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+if [[ -z "$pca" ]]; then
+  log "no PCA backup newer than 26 hours in {{ backup_dir }}/pca" >&2
+  exit 1
+fi
+gzip -t "$pca"
+$aws s3 cp "$pca" "s3://${bucket}/pca/$(basename "$pca")" --region "$region" --only-show-errors
+log "uploaded $(basename "$pca") ($(stat -c %s "$pca") bytes)"
+
+# --- Local retention (PCA's own script prunes its files after 30 days) -----------
+find "{{ backup_dir }}/wikijs" -maxdepth 1 -name 'wikijs-*.dump' -mtime +{{ backup_local_keep_days }} -delete
+log "done"

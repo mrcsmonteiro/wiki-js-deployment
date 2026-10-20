@@ -1,0 +1,17 @@
+---
+# Nightly off-instance backups (terraform/backups.tf creates the bucket).
+#
+# The bucket name contains the account ID, so it is not stored in this public
+# repo: the script builds it at run time from instance metadata, using the
+# same pattern as terraform/backups.tf.
+backup_bucket_prefix: wiki-js-prod-backups
+
+# Local copies on the data volume (also captured by the Control Tower snapshot).
+backup_dir: /data/backups
+backup_local_keep_days: 7
+
+# UTC, like the host. After the PCA cron (03:15 UTC) and before the Control
+# Tower daily snapshot (05:00 UTC).
+backup_on_calendar: "*-*-* 03:30:00 UTC"
+
+wikijs_db_container: wikijs_db

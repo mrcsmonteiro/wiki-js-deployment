@@ -1,0 +1,10 @@
+[Unit]
+Description=Run the Wiki.js and PCA backups nightly
+
+[Timer]
+OnCalendar={{ backup_on_calendar }}
+# Run at the next boot if the host was off at the scheduled time.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
