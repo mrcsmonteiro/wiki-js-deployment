@@ -274,6 +274,11 @@ resource "aws_route53_health_check" "site" {
   request_interval  = 30
   failure_threshold = 3
 
+  # The minimum of 3 checker regions, near the users. The default (~15 regions,
+  # each every 30 s) sent ~1,800 requests/hour through CloudFront to Wiki.js,
+  # most of the wiki's traffic.
+  regions = ["ap-southeast-2", "ap-southeast-1", "ap-northeast-1"]
+
   tags = { Name = "${local.alarm_prefix}-${each.key}" }
 }
 
