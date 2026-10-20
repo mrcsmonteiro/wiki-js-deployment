@@ -30,13 +30,9 @@ resource "aws_security_group" "ec2_sg" {
     description = "Allow all outbound traffic"
   }
 
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Allow SSH from anywhere (for testing; restrict in production)"
-  }
+  # No SSH ingress: hosts are reached through SSM Session Manager (instance
+  # profile with AmazonSSMManagedInstanceCore). Packer opens a temporary SG of
+  # its own, limited to the builder's IP, during image builds.
 
   tags = merge(var.tags, { Name = "${var.project_name}-EC2-SG" })
 
