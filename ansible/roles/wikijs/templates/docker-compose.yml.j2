@@ -10,6 +10,7 @@ services:
     image: {{ postgres_image }}
     container_name: wikijs_db
     restart: unless-stopped
+    init: true
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
@@ -29,6 +30,10 @@ services:
     image: {{ wikijs_image }}
     container_name: wikijs
     restart: unless-stopped
+    # Wiki.js (node) runs as the container's PID 1 and does not reap the git
+    # processes its Git storage sync starts every 5 minutes; without an init
+    # they pile up as zombies (~12 an hour) until the PID space runs out.
+    init: true
     depends_on:
       db:
         condition: service_healthy

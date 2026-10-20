@@ -1,6 +1,11 @@
 ---
-# Applies the monitoring role (and the updated backups role) to the running
-# host. Later images include both (image.yml).
+# Applies the monitoring role, the updated backups role and the updated Wiki.js
+# compose file (init: true) to the running host. Later images include all three
+# (image.yml).
+#
+# Nothing is restarted here. After this run, recreate the Wiki.js containers
+# once so they pick up init: true:
+#   ssh my-ec2 'cd /opt/wikijs && sudo docker compose up -d'
 #
 #   ansible-playbook -i my-ec2, ansible/monitoring.yml
 - name: Install the CloudWatch agent, app probe and backup heartbeat
@@ -9,5 +14,6 @@
   gather_facts: true
 
   roles:
+    - wikijs
     - backups
     - monitoring

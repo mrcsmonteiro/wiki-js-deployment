@@ -166,6 +166,23 @@ resource "aws_cloudwatch_metric_alarm" "memory" {
   ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
+# A process that does not reap its children (Wiki.js did, before init: true)
+# leaves zombies that each hold a PID until the PID space runs out.
+resource "aws_cloudwatch_metric_alarm" "zombies" {
+  alarm_name          = "${local.alarm_prefix}-zombie-processes"
+  alarm_description   = "More than 50 zombie processes: a process is not reaping its children (check init: true in the compose files)."
+  namespace           = "CWAgent"
+  metric_name         = "processes_zombies"
+  dimensions          = { InstanceId = aws_instance.wikijs_prod.id }
+  statistic           = "Maximum"
+  period              = 300
+  evaluation_periods  = 2
+  comparison_operator = "GreaterThanThreshold"
+  threshold           = 50
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
+}
+
 resource "aws_cloudwatch_metric_alarm" "disk" {
   for_each = {
     root = { path = "/", threshold = 85 }
@@ -342,6 +359,13 @@ resource "aws_cloudwatch_dashboard" "host" {
             ["AWS/EC2", "NetworkIn", "InstanceId", aws_instance.wikijs_prod.id],
             ["AWS/EC2", "NetworkOut", "InstanceId", aws_instance.wikijs_prod.id],
           ]
+        }
+      },
+      {
+        type = "metric", x = 0, y = 18, width = 12, height = 6
+        properties = {
+          title   = "Zombie processes", region = var.aws_region, view = "timeSeries", stat = "Maximum", period = 300
+          metrics = [["CWAgent", "processes_zombies", "InstanceId", aws_instance.wikijs_prod.id]]
         }
       },
     ]
