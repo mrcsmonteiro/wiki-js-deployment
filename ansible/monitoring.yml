@@ -5,7 +5,8 @@
 #
 # Nothing is restarted here. After this run, recreate the Wiki.js containers
 # once so they pick up init: true:
-#   ssh my-ec2 'cd /opt/wikijs && sudo docker compose up -d'
+#   ssh my-ec2 'sudo docker compose -f /opt/wikijs/docker-compose.yml up -d'
+# (/opt/wikijs is 0750 root because it holds .env, so cd into it fails as ubuntu.)
 #
 #   ansible-playbook -i my-ec2, ansible/monitoring.yml
 - name: Install the CloudWatch agent, app probe and backup heartbeat
