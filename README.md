@@ -1,6 +1,6 @@
 ![Terransible_Wiki.js_on_EC2](Terransible_Wiki.js_on_EC2.png)
 
-![Static Badge](https://img.shields.io/badge/Terraform-v1.13.2-blue) ![Static Badge](https://img.shields.io/badge/AWS_CLI-2.27.49-blue) ![Static Badge](https://img.shields.io/badge/Python-3.13.4-blue)
+![Static Badge](https://img.shields.io/badge/OpenTofu-v1.13.9-blue) ![Static Badge](https://img.shields.io/badge/AWS_CLI-2.27.49-blue) ![Static Badge](https://img.shields.io/badge/Python-3.13.4-blue)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -8,11 +8,11 @@
 
 ## Overview
 
-This repository provides a comprehensive and automated solution for deploying a Wiki.js instance on AWS using Terraform. The infrastructure is designed to be simple and cost effective.
+This repository provides a comprehensive and automated solution for deploying a Wiki.js instance on AWS using OpenTofu. The infrastructure is designed to be simple and cost effective.
 
 This deployment uses an Infrastructure as Code (IaC) approach, so the entire infrastructure can be versioned, shared, and re-used.
 
-### Terraform Provisioning
+### OpenTofu Provisioning
 
 The core components:
 
@@ -28,13 +28,13 @@ The core components:
 - **Route 53 Records**: Route 53 manages the domain routing. Two records are created:
   - An **A record** (`origin.yourdomain.com`) that points directly to the EC2 instance's Elastic IP. This is used as the origin for the CloudFront distribution.
   - An **Alias record** (`yourdomain.com`) that points to the CloudFront distribution's domain name, effectively routing all public traffic through the CDN.
-- **Ansible Provisioning**: Terraform no longer runs Ansible. The earlier `null_resource` with a `local-exec` provisioner was removed, so `terraform apply` only changes AWS resources and never reconfigures the running server as a side effect. Run the playbook as a separate step (see [Usage](#usage)).
+- **Ansible Provisioning**: OpenTofu does not run Ansible. The earlier `null_resource` with a `local-exec` provisioner was removed, so `tofu apply` only changes AWS resources and never reconfigures the running server as a side effect. Run the playbook as a separate step (see [Usage](#usage)).
 - **Outputs**: Several outputs are defined to provide useful information after deployment, such as the public IP of the EC2 instance, the CloudFront domain name, and the `ssh` command for connecting to the server.
 - **Backend & Providers**: State is stored in a shared **S3 bucket** in a separate deployments account, with S3 native state locking. `backend.tf` sets only the state key; the bucket, region and profile come from `backend-prod.hcl` (copy it from `backend-prod.hcl.example`). There are two **AWS providers**: one for the main region and one for `us-east-1`, which CloudFront needs for its ACM certificate. Both use a named AWS CLI profile, an `allowed_account_ids` guard and `default_tags`, so every resource gets the same set of tags.
 
 ### Ansible Provisioning
 
-The Ansible playbook automates the software installation and configuration on the EC2 instance. Run it separately from Terraform, after the AWS resources exist.
+The Ansible playbook automates the software installation and configuration on the EC2 instance. Run it separately from OpenTofu, after the AWS resources exist.
 
 #### Key Roles of the Ansible Playbook
 - **Docker & Docker Compose**: The playbook's primary function is to set up a **containerized environment** for Wiki.js. It installs **Docker** and **Docker Compose**, ensuring the `ubuntu` user has the necessary permissions to run Docker commands. This approach provides a portable and isolated environment for the application.
@@ -45,7 +45,10 @@ The Ansible playbook automates the software installation and configuration on th
 
 ## Usage
 
-Prerequisites: Terraform >= 1.10, AWS CLI v2 with named profiles for the deployments account (state) and the workload account (resources).
+> Moved from Terraform to OpenTofu in November 2026. The state format is the same; see
+> [docs/migration-v3.md](docs/migration-v3.md#phase-2-switch-to-opentofu) for the one-time switch.
+
+Prerequisites: OpenTofu >= 1.13 (pinned in `.opentofu-version`), AWS CLI v2 with named profiles for the deployments account (state) and the workload account (resources).
 
 ### 1. Configure
 
@@ -60,9 +63,9 @@ Both files are git-ignored.
 ### 2. Plan and apply
 
 ```bash
-terraform init -backend-config=backend-prod.hcl
-terraform plan -out tfplan
-terraform apply tfplan
+tofu init -backend-config=backend-prod.hcl
+tofu plan -out tfplan
+tofu apply tfplan
 rm -f tfplan
 ```
 

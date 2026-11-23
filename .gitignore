@@ -1,6 +1,6 @@
 .vscode/*
 
-# Terraform
+# OpenTofu
 terraform.tfstate*
 **/.terraform/*
 *.tfvars

@@ -1,5 +1,6 @@
 terraform {
-  required_version = ">= 1.10.0"
+  # OpenTofu (CNCF). Pinned for local use in /.opentofu-version.
+  required_version = ">= 1.13.0"
 
   required_providers {
     aws = {
