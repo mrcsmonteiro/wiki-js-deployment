@@ -143,3 +143,69 @@ variable "tags" {
   default     = {}
 }
 
+
+# --- Wiki.js 3 ("green") ---------------------------------------------------------
+
+variable "prod_origin" {
+  description = "Host behind the production distribution: \"legacy\" (2.x, public origin) or \"v3\" (3.x, VPC origin). Flip to \"v3\" at cutover."
+  type        = string
+  default     = "legacy"
+
+  validation {
+    condition     = contains(["legacy", "v3"], var.prod_origin)
+    error_message = "prod_origin must be \"legacy\" or \"v3\"."
+  }
+}
+
+variable "private_subnet_cidr_block" {
+  description = "CIDR block of the private subnet for the Wiki.js 3 host."
+  type        = string
+  default     = "10.0.2.0/24"
+}
+
+variable "nat_instance_type" {
+  description = "Instance type of the fck-nat NAT instance (arm64)."
+  type        = string
+  default     = "t4g.nano"
+}
+
+variable "v3_instance_type" {
+  description = "Instance type for the Wiki.js 3 host (arm64). 4 GiB leaves room for PostgreSQL and Puppeteer."
+  type        = string
+  default     = "t4g.medium"
+}
+
+variable "v3_data_volume_size" {
+  description = "Size in GiB of the Wiki.js 3 data volume (Docker data-root)."
+  type        = number
+  default     = 20
+}
+
+variable "wikijs_v3_ami_id" {
+  description = "Packer-built image for the Wiki.js 3 host (packer build -var-file=v3.pkrvars.hcl). Set in terraform.tfvars."
+  type        = string
+}
+
+variable "enable_v3_staging" {
+  description = "Create the staging distribution, certificate and DNS name for the rehearsal. Set false after cutover."
+  type        = bool
+  default     = true
+}
+
+variable "v3_staging_domain_name" {
+  description = "Staging name for the Wiki.js 3 host during the rehearsal."
+  type        = string
+  default     = "wiki-next.marcosms.com.au"
+}
+
+variable "enable_waf" {
+  description = "Attach the AWS WAF web ACL to the v3 distributions (about USD 10 a month plus requests)."
+  type        = bool
+  default     = true
+}
+
+variable "waf_rate_limit" {
+  description = "Requests per IP in any 5-minute window before AWS WAF blocks that IP."
+  type        = number
+  default     = 2000
+}
