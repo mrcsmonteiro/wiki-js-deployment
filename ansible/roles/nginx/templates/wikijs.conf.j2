@@ -14,6 +14,7 @@ server {
     # Wiki.js 3 serves "/" from its own root page; the home page lives at
     # {{ wikijs_root_redirect }} (where Wiki.js 2.x served it from "/").
     location = / {
+        absolute_redirect off;
         return 302 {{ wikijs_root_redirect }};
     }
 
