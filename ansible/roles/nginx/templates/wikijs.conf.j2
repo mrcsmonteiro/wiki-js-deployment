@@ -10,6 +10,14 @@ server {
     # Uploads and large POSTs (page saves, setup).
     client_max_body_size 50M;
 
+{% if wikijs_root_redirect %}
+    # Wiki.js 3 serves "/" from its own root page; the home page lives at
+    # {{ wikijs_root_redirect }} (where Wiki.js 2.x served it from "/").
+    location = / {
+        return 302 {{ wikijs_root_redirect }};
+    }
+
+{% endif %}
     location / {
         proxy_pass http://127.0.0.1:{{ wikijs_port }};
 

@@ -8,7 +8,7 @@ ami_name_prefix = "wiki-js-v3"
 wikijs_major    = "3.x"
 
 # Pinned with scripts/pin-images.sh on 2026-11-24 (both have linux/arm64 builds).
-wikijs_image   = "ghcr.io/requarks/wiki:3.0.1@sha256:6e9987cc7f0f583f73591fbdf318fe94c6ba76616913e6c8f833b7a1960cd31d"
+wikijs_image = "ghcr.io/requarks/wiki:3.0.1@sha256:6e9987cc7f0f583f73591fbdf318fe94c6ba76616913e6c8f833b7a1960cd31d"
 # Wiki.js 3 needs PostgreSQL 17 or 18 (ltree and pg_trgm ship with the image).
 postgres_image = "postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73"
 
@@ -16,3 +16,7 @@ postgres_image = "postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e
 # rendering and the MCP write tools.
 wikijs_mem_limit   = "2g"
 postgres_mem_limit = "768m"
+
+# Wiki.js 3 serves "/" from a root page that does not exist here; the home
+# page is /index, as in 2.x. nginx redirects "/" there.
+wikijs_root_redirect = "/index"

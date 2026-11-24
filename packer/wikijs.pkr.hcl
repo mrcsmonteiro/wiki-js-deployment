@@ -77,6 +77,12 @@ variable "wikijs_major" {
   default     = "2.x"
 }
 
+variable "wikijs_root_redirect" {
+  description = "Path nginx redirects \"/\" to. Empty for 2.x; /index for 3.x (v3.pkrvars.hcl)."
+  type        = string
+  default     = ""
+}
+
 variable "wikijs_mem_limit" {
   description = "Memory limit of the Wiki.js container."
   type        = string
@@ -177,10 +183,11 @@ build {
     extra_arguments = [
       "--extra-vars",
       jsonencode({
-        wikijs_image       = var.wikijs_image
-        postgres_image     = var.postgres_image
-        wikijs_mem_limit   = var.wikijs_mem_limit
-        postgres_mem_limit = var.postgres_mem_limit
+        wikijs_image         = var.wikijs_image
+        postgres_image       = var.postgres_image
+        wikijs_mem_limit     = var.wikijs_mem_limit
+        postgres_mem_limit   = var.postgres_mem_limit
+        wikijs_root_redirect = var.wikijs_root_redirect
       }),
     ]
 

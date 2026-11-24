@@ -1,3 +1,5 @@
 ---
 wikijs_domain: wiki.marcosms.com.au
 wikijs_port: 3000
+# Path to redirect "/" to. Empty: no redirect (2.x). The v3 build sets /index.
+wikijs_root_redirect: ""
