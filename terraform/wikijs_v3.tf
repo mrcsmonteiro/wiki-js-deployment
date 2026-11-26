@@ -107,9 +107,12 @@ resource "aws_volume_attachment" "wikijs_v3_data" {
 
 # CloudFront reaches the instance privately through a service-managed ENI in the
 # private subnet. Shared by the staging distribution now and production at cutover.
+# CloudFront refuses to update a VPC origin while a distribution uses it, so a
+# new host gets a new VPC origin: create it, move the distribution over, then
+# delete the old one. The name carries the instance ID to stay unique.
 resource "aws_cloudfront_vpc_origin" "wikijs_v3" {
   vpc_origin_endpoint_config {
-    name                   = local.v3_name
+    name                   = "${local.v3_name}-${aws_instance.wikijs_v3.id}"
     arn                    = aws_instance.wikijs_v3.arn
     http_port              = 80
     https_port             = 443
@@ -122,4 +125,9 @@ resource "aws_cloudfront_vpc_origin" "wikijs_v3" {
   }
 
   tags = { Name = local.v3_name }
+
+  lifecycle {
+    create_before_destroy = true
+    replace_triggered_by  = [aws_instance.wikijs_v3.id]
+  }
 }

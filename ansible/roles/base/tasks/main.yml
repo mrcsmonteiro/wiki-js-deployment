@@ -66,6 +66,10 @@
     path: /var/lib/docker
     state: absent
 
+# The image store is pinned to containerd: Docker 29 switched to it for this
+# data-root, and containers created under one store cannot start under the
+# other ("RWLayer ... is unexpectedly nil"). Pinning it keeps a future engine
+# upgrade from switching again underneath the containers on the data volume.
 - name: Configure Docker (data on /data, log rotation)
   ansible.builtin.copy:
     dest: /etc/docker/daemon.json
@@ -75,7 +79,8 @@
         "data-root": "{{ data_mount }}/docker",
         "log-driver": "json-file",
         "log-opts": { "max-size": "10m", "max-file": "3" },
-        "live-restore": true
+        "live-restore": true,
+        "features": { "containerd-snapshotter": true }
       }
 
 - name: Create Docker systemd drop-in directory
@@ -113,11 +118,13 @@
     - "{{ data_mount }}"
     - "{{ pca_dir }}"
 
+# The data volume is attached after the instance starts (aws_volume_attachment),
+# so give it up to 5 minutes to appear; Docker and Wiki.js wait for the mount.
 - name: Mount the data volume by label
   ansible.builtin.lineinfile:
     path: /etc/fstab
     regexp: '^LABEL={{ data_volume_label }}\s'
-    line: "LABEL={{ data_volume_label }}  {{ data_mount }}  ext4  defaults,nofail,x-systemd.device-timeout=30s  0  2"
+    line: "LABEL={{ data_volume_label }}  {{ data_mount }}  ext4  defaults,nofail,x-systemd.device-timeout=300s  0  2"
 
 - name: Bind-mount the PCA app directory from the data volume
   ansible.builtin.lineinfile:

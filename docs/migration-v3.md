@@ -184,8 +184,15 @@ Wiki.js runs its own database migrations on first start.
    `tofu apply -var v3_termination_protection=false`
 5. Set `wikijs_v3_ami_id` in `terraform.tfvars` to the new AMI, then replace the host:
    `tofu apply -var v3_termination_protection=false -replace=aws_instance.wikijs_v3`
-   The VPC origin follows the new instance; CloudFront takes several minutes to redeploy it.
+   CloudFront cannot update a VPC origin in use, so this creates a new VPC origin for the
+   new instance, moves the distribution to it and deletes the old one (create_before_destroy).
+   Each VPC origin and distribution change takes several minutes to deploy.
 6. Check the site (`/index` as a guest, admin sign-in, Administration → System Info shows the new version), then turn protection back on: `tofu apply`.
+
+If `wikijs.service` fails on the new host with "RWLayer of container ... is
+unexpectedly nil", the Docker image store changed under the old containers.
+The data is in named volumes, so recreate the containers:
+`sudo docker rm -f wikijs_db wikijs && sudo systemctl restart wikijs`.
 
 Rollback: replace the instance again with the previous AMI and restore the data
 volume from the snapshot taken in step 3 (database migrations are one-way).
