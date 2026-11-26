@@ -175,6 +175,12 @@ variable "v3_instance_type" {
   default     = "t4g.medium"
 }
 
+variable "v3_termination_protection" {
+  description = "EC2 termination protection on the Wiki.js 3 host. Set to false only for the apply that replaces the instance (upgrades)."
+  type        = bool
+  default     = true
+}
+
 variable "v3_data_volume_size" {
   description = "Size in GiB of the Wiki.js 3 data volume (Docker data-root)."
   type        = number

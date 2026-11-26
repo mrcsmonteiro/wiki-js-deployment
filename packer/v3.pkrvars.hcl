@@ -7,8 +7,9 @@
 ami_name_prefix = "wiki-js-v3"
 wikijs_major    = "3.x"
 
-# Pinned with scripts/pin-images.sh on 2026-11-24 (both have linux/arm64 builds).
-wikijs_image = "ghcr.io/requarks/wiki:3.0.1@sha256:6e9987cc7f0f583f73591fbdf318fe94c6ba76616913e6c8f833b7a1960cd31d"
+# Pinned with scripts/pin-images.sh on 2026-11-27 (both have linux/arm64 builds;
+# postgres:17-alpine digest unchanged since 2026-11-24).
+wikijs_image = "ghcr.io/requarks/wiki:3.6.1@sha256:bd4819960f2f9d35ef016653b97abf5fc0cd93a941d3baf34d2e79e4c9059169"
 # Wiki.js 3 needs PostgreSQL 17 or 18 (ltree and pg_trgm ship with the image).
 postgres_image = "postgres:17-alpine@sha256:f9cf3e1f0066f0eb0c48707d864f0ac5941e9ff454a072077d97a4d278d07d73"
 

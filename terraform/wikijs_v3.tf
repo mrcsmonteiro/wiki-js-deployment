@@ -62,7 +62,7 @@ resource "aws_instance" "wikijs_v3" {
   vpc_security_group_ids      = [aws_security_group.wikijs_v3.id]
   iam_instance_profile        = aws_iam_instance_profile.ssm_profile.name
   associate_public_ip_address = false
-  disable_api_termination     = true
+  disable_api_termination     = var.v3_termination_protection
   # No key pair: shell access is SSM Session Manager only.
 
   credit_specification {
@@ -85,9 +85,12 @@ resource "aws_instance" "wikijs_v3" {
 
   tags = { Name = local.v3_name }
 
+  # The instance is disposable: everything it needs is in the AMI, SSM
+  # Parameter Store and the data volume (which keeps prevent_destroy). An
+  # upgrade replaces it with "tofu apply -replace" after turning termination
+  # protection off; see docs/migration-v3.md, "Upgrading Wiki.js".
   lifecycle {
-    prevent_destroy = true
-    ignore_changes  = [ami]
+    ignore_changes = [ami]
   }
 
   # Outbound (Git sync, SSM) needs the NAT route before the first boot.

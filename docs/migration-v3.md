@@ -167,3 +167,25 @@ within minutes (re-enable its Git sync if you turned it off).
 3. Wiki.js MCP server: **Administration > MCP**, enable it, give your group `use:mcp`, and
    add `https://wiki.marcosms.com.au/_mcp` as a custom connector in claude.ai with a
    read-only scope first.
+
+## Upgrading Wiki.js
+
+The host is disposable: an upgrade bakes a new AMI and replaces the instance.
+The data volume (database, Docker data-root) moves across untouched, and
+Wiki.js runs its own database migrations on first start.
+
+1. Pin the new images and update `packer/v3.pkrvars.hcl`:
+   `scripts/pin-images.sh ghcr.io/requarks/wiki:<version> postgres:17-alpine`
+2. Build the AMI: `packer build -var-file=packer/v3.pkrvars.hcl packer`
+3. Stop Wiki.js and snapshot the data volume (consistent restore point):
+   `sudo systemctl stop wikijs` over SSM, then
+   `aws ec2 create-snapshot --volume-id <wikijs_v3_data_volume_id> --description "before Wiki.js <version>"`
+4. Turn termination protection off:
+   `tofu apply -var v3_termination_protection=false`
+5. Set `wikijs_v3_ami_id` in `terraform.tfvars` to the new AMI, then replace the host:
+   `tofu apply -var v3_termination_protection=false -replace=aws_instance.wikijs_v3`
+   The VPC origin follows the new instance; CloudFront takes several minutes to redeploy it.
+6. Check the site (`/index` as a guest, admin sign-in, Administration → System Info shows the new version), then turn protection back on: `tofu apply`.
+
+Rollback: replace the instance again with the previous AMI and restore the data
+volume from the snapshot taken in step 3 (database migrations are one-way).
