@@ -196,3 +196,33 @@ The data is in named volumes, so recreate the containers:
 
 Rollback: replace the instance again with the previous AMI and restore the data
 volume from the snapshot taken in step 3 (database migrations are one-way).
+
+## Login: IAM Identity Center (SAML)
+
+Identity Center cannot create a customer managed SAML 2.0 application through its
+API, so this part lives in the console (management account, Identity Center →
+Applications → Customer managed). Everything else is in Wiki.js admin.
+
+| Where | Setting | Value |
+|---|---|---|
+| Identity Center app "Wiki.js" | Application ACS URL | `https://<wiki host>/_api/auth/44e69006-fffa-4f4a-ae78-ae16c391faf3/callback` |
+| | Application SAML audience | `https://wiki.marcosms.com.au/saml` (stable; never changes) |
+| | Attribute `Subject` | `${user:email}`, format `emailAddress` |
+| | Attribute `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress` | `${user:email}` |
+| | Attribute `http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name` | `${user:name}` |
+| | Assigned users | Marcos |
+| Wiki.js strategy "AWS IAM Identity Center" | Entry point | the app's IAM Identity Center sign-in URL |
+| | Issuer | `https://wiki.marcosms.com.au/saml` |
+| | Certificate | the app's IAM Identity Center certificate (expires 2031-11-26) |
+| | Require signed assertions / requested auth context | on / disabled (MFA sign-ins send a different context) |
+| | Self-registration | off: only existing accounts can sign in |
+| Wiki.js security | `trustProxy` | on (nginx passes only the CloudFront-appended client IP and `X-Forwarded-Proto https`) |
+
+Wiki.js matches SAML logins to accounts by email: the Marcos account uses the
+Identity Center user's email. The local Administrator account (passkey + 2FA)
+is the break-glass login; keep Local Authentication on the login screen.
+
+At cutover, change the Identity Center app's ACS URL and application start URL
+from `wiki-next.` to `wiki.`. Before the Identity Center certificate expires,
+download the new one from the app and paste it into the strategy (several can
+be joined with `|` during the rotation).

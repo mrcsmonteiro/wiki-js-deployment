@@ -3,6 +3,16 @@
 # default_server matters: CloudFront sends origin requests with a Host header
 # that is not the wiki name. Without default_server, another vhost on port 80
 # would receive them. Other vhosts on this host must match by server_name.
+# Only CloudFront reaches this server (the security group allows its
+# origin-facing prefix list). CloudFront appends the viewer's address to
+# X-Forwarded-For, so the last entry is the real client and anything before it
+# is whatever the client sent. Pass only that last entry on, so Wiki.js can
+# trust the header (security.trustProxy) without it being spoofable.
+map $http_x_forwarded_for $wikijs_client_ip {
+    "~(?<last>[^,\s]+)\s*$" $last;
+    default                  $remote_addr;
+}
+
 server {
     listen 80 default_server;
     server_name {{ wikijs_domain }};
@@ -23,9 +33,12 @@ server {
         proxy_pass http://127.0.0.1:{{ wikijs_port }};
 
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Real-IP $wikijs_client_ip;
+        proxy_set_header X-Forwarded-For $wikijs_client_ip;
+        # Viewers always reach CloudFront over HTTPS (redirect-to-https); only the
+        # CloudFront-to-host hop is HTTP. Wiki.js builds absolute URLs, such as
+        # the SAML callback, from this.
+        proxy_set_header X-Forwarded-Proto https;
         proxy_set_header X-Forwarded-Ssl on;
         proxy_set_header X-Forwarded-Host $host;
 
