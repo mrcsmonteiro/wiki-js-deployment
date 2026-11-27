@@ -77,7 +77,7 @@ resource "aws_instance" "wikijs_v3" {
 
   root_block_device {
     volume_type           = "gp3"
-    volume_size           = 10
+    volume_size           = var.v3_root_volume_size
     encrypted             = true
     delete_on_termination = true
     tags                  = { Name = "${local.v3_name}-root" }

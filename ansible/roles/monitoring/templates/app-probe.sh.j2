@@ -1,5 +1,5 @@
 #!/bin/bash
-# Local health probe for both apps; pushes AppUp (1 = up, 0 = down) per app.
+# Local health probe; pushes AppUp (1 = up, 0 = down) per app this host runs.
 # Managed by Ansible (wiki-js-deployment).
 #   wikijs: the login page through host nginx (nginx + Wiki.js + its database)
 #   pca:    /api/health through PCA's web container (web + API + SQLite)
@@ -14,10 +14,12 @@ if curl -q -fsS -m 10 -o /dev/null -H 'Host: {{ wikijs_domain }}' http://127.0.0
   wikijs=1
 fi
 
+{% if pca_on_host %}
 pca=0
 if [[ "$(curl -q -fsS -m 10 http://127.0.0.1:8088/api/health | jq -r '.ok' 2>/dev/null)" == "true" ]]; then
   pca=1
 fi
+{% endif %}
 
 /snap/bin/aws cloudwatch put-metric-data --region "$region" --namespace '{{ metric_namespace }}' \
-  --metric-data "[{\"MetricName\":\"AppUp\",\"Dimensions\":[{\"Name\":\"App\",\"Value\":\"wikijs\"}],\"Value\":${wikijs},\"Unit\":\"Count\"},{\"MetricName\":\"AppUp\",\"Dimensions\":[{\"Name\":\"App\",\"Value\":\"pca\"}],\"Value\":${pca},\"Unit\":\"Count\"}]"
+  --metric-data "[{\"MetricName\":\"AppUp\",\"Dimensions\":[{\"Name\":\"App\",\"Value\":\"wikijs\"}],\"Value\":${wikijs},\"Unit\":\"Count\"}{% if pca_on_host %},{\"MetricName\":\"AppUp\",\"Dimensions\":[{\"Name\":\"App\",\"Value\":\"pca\"}],\"Value\":${pca},\"Unit\":\"Count\"}{% endif %}]"

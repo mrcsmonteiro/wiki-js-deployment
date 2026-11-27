@@ -187,6 +187,12 @@ variable "v3_data_volume_size" {
   default     = 20
 }
 
+variable "v3_root_volume_size" {
+  description = "Size in GiB of the Wiki.js 3 root volume. Docker's containerd image store keeps pulled images on the root disk (/var/lib/containerd, about 4 GB for Wiki.js 3 and Postgres), so 10 GiB ran at 90%. Growing it is an in-place EBS change; then grow the partition (docs/migration-v3.md)."
+  type        = number
+  default     = 20
+}
+
 variable "wikijs_v3_ami_id" {
   description = "Packer-built image for the Wiki.js 3 host (packer build -var-file=v3.pkrvars.hcl). Set in terraform.tfvars."
   type        = string
@@ -195,7 +201,7 @@ variable "wikijs_v3_ami_id" {
 variable "enable_v3_staging" {
   description = "Create the staging distribution, certificate and DNS name for the rehearsal. Set false after cutover."
   type        = bool
-  default     = true
+  default     = false # Cutover done 2026-11-27; true brings wiki-next back for a rehearsal.
 }
 
 variable "v3_staging_domain_name" {

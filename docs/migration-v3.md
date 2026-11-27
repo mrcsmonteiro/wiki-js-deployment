@@ -197,6 +197,15 @@ The data is in named volumes, so recreate the containers:
 Rollback: replace the instance again with the previous AMI and restore the data
 volume from the snapshot taken in step 3 (database migrations are one-way).
 
+### Growing the root volume
+
+With Docker's containerd image store the images live on the root disk
+(`/var/lib/containerd`), not on `/data`. A new host gets `v3_root_volume_size`
+and cloud-init grows the partition on first boot. To grow the running host,
+raise `v3_root_volume_size`, run `tofu apply` (an in-place EBS change, no
+replacement), then grow the partition and filesystem over SSM:
+`growpart /dev/nvme0n1 1 && resize2fs /dev/nvme0n1p1 && df -h /`.
+
 ## Login: IAM Identity Center (SAML)
 
 Identity Center cannot create a customer managed SAML 2.0 application through its

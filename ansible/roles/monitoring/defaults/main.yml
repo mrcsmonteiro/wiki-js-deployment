@@ -16,3 +16,7 @@ cwagent_logs:
   - { file: /var/log/nginx/pca.access.log, group: /wiki-js-prod/nginx/pca-access }
   - { file: /var/log/nginx/pca.error.log, group: /wiki-js-prod/nginx/pca-error }
   - { file: /var/log/wikijs-backup.log, group: /wiki-js-prod/backup }
+
+# PCA Practice runs on this host too: probe it and back it up. Off for the
+# Wiki.js 3 host until PCA moves there (packer/v3.pkrvars.hcl).
+pca_on_host: true

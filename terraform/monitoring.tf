@@ -108,7 +108,7 @@ resource "aws_cloudwatch_metric_alarm" "system_status" {
   alarm_description   = "System status check failed; EC2 auto-recovery triggered."
   namespace           = "AWS/EC2"
   metric_name         = "StatusCheckFailed_System"
-  dimensions          = { InstanceId = aws_instance.wikijs_prod.id }
+  dimensions          = { InstanceId = aws_instance.wikijs_v3.id }
   statistic           = "Maximum"
   period              = 60
   evaluation_periods  = 2
@@ -123,7 +123,7 @@ resource "aws_cloudwatch_metric_alarm" "instance_status" {
   alarm_description   = "Instance status check failed (OS unreachable: kernel, memory, network config)."
   namespace           = "AWS/EC2"
   metric_name         = "StatusCheckFailed_Instance"
-  dimensions          = { InstanceId = aws_instance.wikijs_prod.id }
+  dimensions          = { InstanceId = aws_instance.wikijs_v3.id }
   statistic           = "Maximum"
   period              = 60
   evaluation_periods  = 3
@@ -139,7 +139,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_credits" {
   alarm_description   = "CPU credit balance low; the instance will be throttled to its baseline."
   namespace           = "AWS/EC2"
   metric_name         = "CPUCreditBalance"
-  dimensions          = { InstanceId = aws_instance.wikijs_prod.id }
+  dimensions          = { InstanceId = aws_instance.wikijs_v3.id }
   statistic           = "Average"
   period              = 300
   evaluation_periods  = 3
@@ -155,7 +155,7 @@ resource "aws_cloudwatch_metric_alarm" "memory" {
   alarm_description   = "Memory used above 90% for 15 minutes, or the CloudWatch agent stopped reporting."
   namespace           = "CWAgent"
   metric_name         = "mem_used_percent"
-  dimensions          = { InstanceId = aws_instance.wikijs_prod.id }
+  dimensions          = { InstanceId = aws_instance.wikijs_v3.id }
   statistic           = "Average"
   period              = 300
   evaluation_periods  = 3
@@ -173,7 +173,7 @@ resource "aws_cloudwatch_metric_alarm" "zombies" {
   alarm_description   = "More than 50 zombie processes: a process is not reaping its children (check init: true in the compose files)."
   namespace           = "CWAgent"
   metric_name         = "processes_zombies"
-  dimensions          = { InstanceId = aws_instance.wikijs_prod.id }
+  dimensions          = { InstanceId = aws_instance.wikijs_v3.id }
   statistic           = "Maximum"
   period              = 300
   evaluation_periods  = 2
@@ -193,7 +193,7 @@ resource "aws_cloudwatch_metric_alarm" "disk" {
   alarm_description   = "Disk ${each.value.path} above ${each.value.threshold}% used."
   namespace           = "CWAgent"
   metric_name         = "disk_used_percent"
-  dimensions          = { InstanceId = aws_instance.wikijs_prod.id, path = each.value.path, fstype = "ext4" }
+  dimensions          = { InstanceId = aws_instance.wikijs_v3.id, path = each.value.path, fstype = "ext4" }
   statistic           = "Maximum"
   period              = 300
   evaluation_periods  = 2
@@ -223,13 +223,17 @@ resource "aws_cloudwatch_metric_alarm" "app_up" {
   ok_actions          = [aws_sns_topic.alerts.arn]
 }
 
-# The nightly backup pushes BackupSucceeded = 1 only after both uploads succeed.
-# Alarm when there has been no success for 26 consecutive hours.
+# The nightly backup pushes BackupSucceeded = 1 per app (dimension App) after
+# that app's upload succeeds, from whichever host runs it. Alarm per app when
+# there has been no success for 26 consecutive hours.
 resource "aws_cloudwatch_metric_alarm" "backup" {
-  alarm_name          = "${local.alarm_prefix}-backup-missing"
-  alarm_description   = "No successful nightly backup (Wiki.js and PCA to S3) in 26 hours."
+  for_each = toset(["wikijs", "pca"])
+
+  alarm_name          = "${local.alarm_prefix}-${each.key}-backup-missing"
+  alarm_description   = "No successful nightly ${each.key} backup to S3 in 26 hours."
   namespace           = local.metric_namespace
   metric_name         = "BackupSucceeded"
+  dimensions          = { App = each.key }
   statistic           = "Sum"
   period              = 3600
   evaluation_periods  = 26

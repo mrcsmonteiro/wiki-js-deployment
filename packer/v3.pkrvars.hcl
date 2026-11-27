@@ -21,3 +21,7 @@ postgres_mem_limit = "768m"
 # Wiki.js 3 serves "/" from a root page that does not exist here; the home
 # page is /index, as in 2.x. nginx redirects "/" there.
 wikijs_root_redirect = "/index"
+
+# PCA Practice still runs on the 2.x host (tracker 09.015). Set to true once it
+# has moved here, so the probe and the nightly backup cover it again.
+pca_on_host = false

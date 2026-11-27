@@ -48,7 +48,7 @@ variable "postgres_image" {
 }
 
 variable "root_volume_size" {
-  description = "Root volume size in GiB. The root disk holds only the OS and swap; data is on /data."
+  description = "Root volume size in GiB of the AMI. Besides the OS and swap, the root disk holds the pulled images (containerd image store, /var/lib/containerd); Terraform launches the host with a larger root volume (v3_root_volume_size)."
   type        = number
   default     = 10
 }
@@ -81,6 +81,12 @@ variable "wikijs_root_redirect" {
   description = "Path nginx redirects \"/\" to. Empty for 2.x; /index for 3.x (v3.pkrvars.hcl)."
   type        = string
   default     = ""
+}
+
+variable "pca_on_host" {
+  description = "Whether PCA Practice runs on this host (health probe and nightly backup)."
+  type        = bool
+  default     = true
 }
 
 variable "wikijs_mem_limit" {
@@ -188,6 +194,7 @@ build {
         wikijs_mem_limit     = var.wikijs_mem_limit
         postgres_mem_limit   = var.postgres_mem_limit
         wikijs_root_redirect = var.wikijs_root_redirect
+        pca_on_host          = var.pca_on_host
       }),
     ]
 
