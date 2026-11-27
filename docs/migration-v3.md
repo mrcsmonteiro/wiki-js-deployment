@@ -164,9 +164,11 @@ within minutes (re-enable its Git sync if you turned it off).
    root volume) can go in the same change, or earlier. Remove `prevent_destroy`
    and `disable_api_termination` deliberately, one resource at a time.
 2. Set `enable_v3_staging = false` and apply.
-3. Wiki.js MCP server: **Administration > MCP**, enable it, give your group `use:mcp`, and
-   add `https://wiki.marcosms.com.au/_mcp` as a custom connector in claude.ai with a
-   read-only scope first.
+3. Wiki.js MCP server (done 2026-11-27): **Administration > MCP** on, with only the read
+   tool groups (Search & Browse, Read Pages, Page History); API access on. claude.ai
+   connects through OAuth (custom connector `https://wiki.marcosms.com.au/_mcp`, dynamic
+   client registration) and the consent grants Pages and MCP at Read for 90 days.
+   Settings, renewal and troubleshooting: wiki page `/en/private/wiki/claude-wiki-connector`.
 
 ## Upgrading Wiki.js
 
