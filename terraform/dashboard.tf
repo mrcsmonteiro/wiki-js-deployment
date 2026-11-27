@@ -8,7 +8,7 @@
 # billed per GB scanned, only when the dashboard is viewed (the logs are small).
 
 locals {
-  instance_dim = ["InstanceId", aws_instance.wikijs_prod.id]
+  instance_dim = ["InstanceId", aws_instance.wikijs_v3.id]
 
   dashboard_alarm_arns = concat(
     [
@@ -17,10 +17,10 @@ locals {
       aws_cloudwatch_metric_alarm.cpu_credits.arn,
       aws_cloudwatch_metric_alarm.memory.arn,
       aws_cloudwatch_metric_alarm.zombies.arn,
-      aws_cloudwatch_metric_alarm.backup.arn,
     ],
     [for a in aws_cloudwatch_metric_alarm.disk : a.arn],
     [for a in aws_cloudwatch_metric_alarm.app_up : a.arn],
+    [for a in aws_cloudwatch_metric_alarm.backup : a.arn],
     [for a in aws_cloudwatch_metric_alarm.site_health : a.arn],
   )
 
@@ -57,7 +57,8 @@ resource "aws_cloudwatch_dashboard" "host" {
             concat(["CWAgent", "disk_used_percent"], local.instance_dim, ["path", "/", "fstype", "ext4", { stat = "Maximum", label = "Disk / %" }]),
             concat(["CWAgent", "disk_used_percent"], local.instance_dim, ["path", "/data", "fstype", "ext4", { stat = "Maximum", label = "Disk /data %" }]),
             concat(["AWS/EC2", "CPUCreditBalance"], local.instance_dim, [{ stat = "Average", label = "CPU credits" }]),
-            [local.metric_namespace, "BackupSucceeded", { stat = "Sum", period = 86400, label = "Backups (24 h)" }],
+            [local.metric_namespace, "BackupSucceeded", "App", "wikijs", { stat = "Sum", period = 86400, label = "Wiki.js backups (24 h)" }],
+            [local.metric_namespace, "BackupSucceeded", "App", "pca", { stat = "Sum", period = 86400, label = "PCA backups (24 h)" }],
           ]
         }
       },
@@ -167,7 +168,7 @@ resource "aws_cloudwatch_dashboard" "host" {
           view    = "bar"
           stat    = "Sum"
           period  = 86400
-          metrics = [[local.metric_namespace, "BackupSucceeded", { label = "Backups per day" }]]
+          metrics = [[local.metric_namespace, "BackupSucceeded", "App", "wikijs", { label = "Wiki.js" }], [local.metric_namespace, "BackupSucceeded", "App", "pca", { label = "PCA" }]]
         }
       },
       {

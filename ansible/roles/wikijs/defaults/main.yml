@@ -6,6 +6,11 @@ wikijs_port: 3000
 wikijs_image: "requarks/wiki:2.5.316@sha256:fffff288a52f76e5b8c19a4fbcd0f3e538e96edea642c4f2d813d54d59a876de"
 postgres_image: "postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea"
 
+# Container memory limits. 2.x defaults; the v3 build raises them
+# (packer/v3.pkrvars.hcl): Wiki.js 3 runs Puppeteer for page rendering.
+wikijs_mem_limit: "768m"
+postgres_mem_limit: "384m"
+
 wikijs_db_name: wikijs_db
 wikijs_db_user: wikijs
 

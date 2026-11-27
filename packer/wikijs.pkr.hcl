@@ -48,7 +48,7 @@ variable "postgres_image" {
 }
 
 variable "root_volume_size" {
-  description = "Root volume size in GiB. The root disk holds only the OS and swap; data is on /data."
+  description = "Root volume size in GiB of the AMI. Besides the OS and swap, the root disk holds the pulled images (containerd image store, /var/lib/containerd); Terraform launches the host with a larger root volume (v3_root_volume_size)."
   type        = number
   default     = 10
 }
@@ -65,8 +65,44 @@ variable "wikijs_image" {
   default     = "requarks/wiki:2.5.316@sha256:fffff288a52f76e5b8c19a4fbcd0f3e538e96edea642c4f2d813d54d59a876de"
 }
 
+variable "ami_name_prefix" {
+  description = "Image name prefix: wiki-js-prod for 2.x, wiki-js-v3 for 3.x (v3.pkrvars.hcl)."
+  type        = string
+  default     = "wiki-js-prod"
+}
+
+variable "wikijs_major" {
+  description = "Wiki.js major version in the image description."
+  type        = string
+  default     = "2.x"
+}
+
+variable "wikijs_root_redirect" {
+  description = "Path nginx redirects \"/\" to. Empty for 2.x; /index for 3.x (v3.pkrvars.hcl)."
+  type        = string
+  default     = ""
+}
+
+variable "pca_on_host" {
+  description = "Whether PCA Practice runs on this host (health probe and nightly backup)."
+  type        = bool
+  default     = true
+}
+
+variable "wikijs_mem_limit" {
+  description = "Memory limit of the Wiki.js container."
+  type        = string
+  default     = "768m"
+}
+
+variable "postgres_mem_limit" {
+  description = "Memory limit of the PostgreSQL container."
+  type        = string
+  default     = "384m"
+}
+
 locals {
-  ami_name = "wiki-js-prod-${formatdate("YYYYMMDD-hhmm", timestamp())}"
+  ami_name = "${var.ami_name_prefix}-${formatdate("YYYYMMDD-hhmm", timestamp())}"
 
   # Tagging standard (.kiro/steering/tagging-standard.md), with ManagedBy = packer.
   common_tags = {
@@ -86,7 +122,7 @@ source "amazon-ebs" "wikijs" {
   instance_type = var.instance_type
 
   ami_name        = local.ami_name
-  ami_description = "Wiki.js host: Ubuntu 24.04 arm64, Docker, nginx, Wiki.js 2.x compose (stateless)"
+  ami_description = "Wiki.js host: Ubuntu 24.04 arm64, Docker, nginx, Wiki.js ${var.wikijs_major} compose (stateless)"
 
   # Latest Ubuntu 24.04 arm64 image published by Canonical.
   source_ami_filter {
@@ -153,8 +189,12 @@ build {
     extra_arguments = [
       "--extra-vars",
       jsonencode({
-        wikijs_image   = var.wikijs_image
-        postgres_image = var.postgres_image
+        wikijs_image         = var.wikijs_image
+        postgres_image       = var.postgres_image
+        wikijs_mem_limit     = var.wikijs_mem_limit
+        postgres_mem_limit   = var.postgres_mem_limit
+        wikijs_root_redirect = var.wikijs_root_redirect
+        pca_on_host          = var.pca_on_host
       }),
     ]
 

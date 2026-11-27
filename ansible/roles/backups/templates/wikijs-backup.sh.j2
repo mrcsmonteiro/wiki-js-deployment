@@ -29,7 +29,10 @@ fi
 docker exec -i {{ wikijs_db_container }} pg_restore --list < "$dump" > /dev/null
 $aws s3 cp "$dump" "s3://${bucket}/wikijs/$(basename "$dump")" --region "$region" --only-show-errors
 log "uploaded $(basename "$dump") ($(stat -c %s "$dump") bytes)"
+$aws cloudwatch put-metric-data --region "$region" --namespace '{{ backup_metric_namespace }}' \
+  --metric-name BackupSucceeded --dimensions App=wikijs --value 1 --unit Count
 
+{% if pca_on_host %}
 # --- PCA ------------------------------------------------------------------------
 # PCA's cron writes pca-*.sqlite3.gz at 03:15 UTC. Upload the newest one, and
 # fail if it is older than 26 hours (the cron did not run).
@@ -41,11 +44,13 @@ fi
 gzip -t "$pca"
 $aws s3 cp "$pca" "s3://${bucket}/pca/$(basename "$pca")" --region "$region" --only-show-errors
 log "uploaded $(basename "$pca") ($(stat -c %s "$pca") bytes)"
+$aws cloudwatch put-metric-data --region "$region" --namespace '{{ backup_metric_namespace }}' \
+  --metric-name BackupSucceeded --dimensions App=pca --value 1 --unit Count
+{% endif %}
 
 # --- Local retention (PCA's own script prunes its files after 30 days) -----------
+
 find "{{ backup_dir }}/wikijs" -maxdepth 1 -name 'wikijs-*.dump' -mtime +{{ backup_local_keep_days }} -delete
 
 # Heartbeat for the backup-missing alarm: only reached when everything above worked.
-$aws cloudwatch put-metric-data --region "$region" --namespace '{{ backup_metric_namespace }}' \
-  --metric-name BackupSucceeded --value 1 --unit Count
 log "done"

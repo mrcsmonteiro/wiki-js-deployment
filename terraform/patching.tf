@@ -24,12 +24,13 @@ resource "aws_ssm_maintenance_window" "patching" {
 resource "aws_ssm_maintenance_window_target" "patching" {
   window_id     = aws_ssm_maintenance_window.patching.id
   name          = "wiki-js-prod"
-  description   = "The Wiki.js host, by Name tag"
+  description   = "The Wiki.js 3 host, and the 2.x host while it still runs PCA, by Name tag"
   resource_type = "INSTANCE"
 
   targets {
-    key    = "tag:Name"
-    values = ["wiki-js-prod"]
+    key = "tag:Name"
+    # Drop "wiki-js-prod" (the 2.x host) when it is retired (tracker 09.011).
+    values = ["wiki-js-v3", "wiki-js-prod"]
   }
 }
 
@@ -77,7 +78,8 @@ resource "aws_ssm_association" "patch_scan" {
   }
 
   targets {
-    key    = "tag:Name"
-    values = ["wiki-js-prod"]
+    key = "tag:Name"
+    # Drop "wiki-js-prod" (the 2.x host) when it is retired (tracker 09.011).
+    values = ["wiki-js-v3", "wiki-js-prod"]
   }
 }
